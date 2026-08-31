@@ -1,0 +1,12 @@
+[project]
+name = "wavelength"
+version = "0.1.0"
+description = "Wavelength monorepo root"
+requires-python = ">=3.12,<3.13"
+dependencies = []
+
+[tool.uv.workspace]
+members = ["packages/*"]
+
+[tool.uv]
+package = false

@@ -1,0 +1,67 @@
+version = 1
+revision = 3
+requires-python = "==3.12.*"
+
+[manifest]
+members = [
+    "chat",
+    "compatibility-engine",
+    "discovery",
+    "matching",
+    "monetization",
+    "music-ingestion",
+    "notifications",
+    "shared",
+    "trust-safety",
+    "wavelength",
+]
+
+[[package]]
+name = "chat"
+version = "0.1.0"
+source = { editable = "packages/chat" }
+
+[[package]]
+name = "compatibility-engine"
+version = "0.1.0"
+source = { editable = "packages/compatibility-engine" }
+
+[[package]]
+name = "discovery"
+version = "0.1.0"
+source = { editable = "packages/discovery" }
+
+[[package]]
+name = "matching"
+version = "0.1.0"
+source = { editable = "packages/matching" }
+
+[[package]]
+name = "monetization"
+version = "0.1.0"
+source = { editable = "packages/monetization" }
+
+[[package]]
+name = "music-ingestion"
+version = "0.1.0"
+source = { editable = "packages/music-ingestion" }
+
+[[package]]
+name = "notifications"
+version = "0.1.0"
+source = { editable = "packages/notifications" }
+
+[[package]]
+name = "shared"
+version = "0.1.0"
+source = { editable = "packages/shared" }
+
+[[package]]
+name = "trust-safety"
+version = "0.1.0"
+source = { editable = "packages/trust-safety" }
+
+[[package]]
+name = "wavelength"
+version = "0.1.0"
+source = { virtual = "." }
