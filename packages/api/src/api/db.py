@@ -1,11 +1,12 @@
 from collections.abc import Generator
 
-from shared.db import get_sessionmaker
-from sqlalchemy.orm import Session
+from shared.db import get_engine
+from sqlalchemy.orm import Session, sessionmaker
 
 from api.config import settings
 
-SessionLocal = get_sessionmaker(settings.database_url)
+engine = get_engine(settings.database_url)
+SessionLocal = sessionmaker(bind=engine, autoflush=False, autocommit=False)
 
 
 def get_db() -> Generator[Session, None, None]:
