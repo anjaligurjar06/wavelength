@@ -46,7 +46,7 @@ class ArtistGenreCache(Base):
     __tablename__ = "artist_genre_cache"
 
     artist_id: Mapped[str] = mapped_column(String(64), primary_key=True)
-    genres: Mapped[dict] = mapped_column(JSON, default=dict)
+    genres: Mapped[list[str]] = mapped_column(JSON, default=list)
     cached_at: Mapped[datetime] = mapped_column(server_default=func.now())
 
 

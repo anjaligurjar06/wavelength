@@ -1,0 +1,5 @@
+user_a,user_b,genre_similarity,expected_behavior,notes
+A,B,1.0,high,identical genre vectors
+A,C,0.0,low,no shared genres
+A,D,0.588,medium,partial overlap
+A,E,0.0,no_score,empty genre vector
