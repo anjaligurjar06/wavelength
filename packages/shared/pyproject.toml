@@ -3,7 +3,11 @@ name = "shared"
 version = "0.1.0"
 description = "Shared utilities, config, and base models for Wavelength"
 requires-python = ">=3.12,<3.13"
-dependencies = []
+dependencies = [
+    "sqlalchemy>=2.0",
+    "alembic>=1.13",
+    "psycopg[binary]>=3.2",
+]
 
 [build-system]
 requires = ["hatchling"]
