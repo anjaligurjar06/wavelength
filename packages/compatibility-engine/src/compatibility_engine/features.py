@@ -1,8 +1,8 @@
 from collections import defaultdict
 from collections.abc import Callable
 
-from sqlalchemy.orm import Session
 from music_ingestion.genre_cache import get_or_fetch_artist_genres
+from sqlalchemy.orm import Session
 
 
 def build_genre_vector_from_artists(

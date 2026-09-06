@@ -1,8 +1,7 @@
 from collections.abc import Callable
 
-from sqlalchemy.orm import Session
-
 from shared.models import ArtistGenreCache
+from sqlalchemy.orm import Session
 
 
 def get_or_fetch_artist_genres(

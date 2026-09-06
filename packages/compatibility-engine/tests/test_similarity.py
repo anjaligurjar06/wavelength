@@ -1,5 +1,4 @@
 import pytest
-
 from compatibility_engine.similarity import cosine_similarity
 
 

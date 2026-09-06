@@ -1,14 +1,12 @@
 import pytest
-
-from sqlalchemy import create_engine
-from sqlalchemy.orm import Session
-from sqlalchemy.pool import StaticPool
-
 from compatibility_engine.features import (
     build_genre_vector,
     build_genre_vector_from_artists,
 )
 from shared.models import Base
+from sqlalchemy import create_engine
+from sqlalchemy.orm import Session
+from sqlalchemy.pool import StaticPool
 
 
 def make_session() -> Session:

@@ -1,9 +1,8 @@
+from music_ingestion.genre_cache import get_or_fetch_artist_genres
+from shared.models import ArtistGenreCache, Base
 from sqlalchemy import create_engine
 from sqlalchemy.orm import Session
 from sqlalchemy.pool import StaticPool
-
-from music_ingestion.genre_cache import get_or_fetch_artist_genres
-from shared.models import ArtistGenreCache, Base
 
 
 def make_session() -> Session:
