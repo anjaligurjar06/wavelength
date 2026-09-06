@@ -1,6 +1,6 @@
 import json
 
-from discovery.snapshot import save_snapshot
+from music_ingestion.snapshot import save_snapshot
 
 
 def test_save_snapshot(tmp_path):

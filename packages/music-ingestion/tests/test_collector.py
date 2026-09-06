@@ -1,6 +1,6 @@
 from unittest.mock import patch
 
-from discovery.collector import collect_recently_played
+from music_ingestion.collector import collect_recently_played
 
 
 def test_collect_recently_played():
@@ -16,11 +16,11 @@ def test_collect_recently_played():
     }
 
     with patch(
-        "discovery.collector.SpotifyClient.get_recently_played",
+        "music_ingestion.collector.SpotifyClient.get_recently_played",
         return_value=fake_data,
     ):
         with patch(
-            "discovery.collector.save_snapshot"
+            "music_ingestion.collector.save_snapshot"
         ) as mock_save:
             result = collect_recently_played("fake-token")
 

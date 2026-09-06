@@ -1,4 +1,5 @@
 from unittest.mock import Mock, patch
+
 from music_ingestion.spotify_client import SpotifyClient
 
 
@@ -16,7 +17,7 @@ def test_get_top_artists():
     }
     fake_response.raise_for_status.return_value = None
 
-    with patch("discovery.spotify_client.requests.get") as mock_get:
+    with patch("music_ingestion.spotify_client.requests.get") as mock_get:
         mock_get.return_value = fake_response
 
         result = client.get_top_artists(
@@ -53,7 +54,7 @@ def test_get_top_tracks():
     }
     fake_response.raise_for_status.return_value = None
 
-    with patch("discovery.spotify_client.requests.get") as mock_get:
+    with patch("music_ingestion.spotify_client.requests.get") as mock_get:
         mock_get.return_value = fake_response
 
         result = client.get_top_tracks(
@@ -91,7 +92,7 @@ def test_get_recently_played():
     }
     fake_response.raise_for_status.return_value = None
 
-    with patch("discovery.spotify_client.requests.get") as mock_get:
+    with patch("music_ingestion.spotify_client.requests.get") as mock_get:
         mock_get.return_value = fake_response
 
         result = client.get_recently_played(limit=10)
