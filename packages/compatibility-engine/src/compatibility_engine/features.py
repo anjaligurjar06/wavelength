@@ -1,6 +1,27 @@
 from collections import defaultdict
+from collections.abc import Callable
+
+from sqlalchemy.orm import Session
+from music_ingestion.genre_cache import get_or_fetch_artist_genres
 
 
+def build_genre_vector_from_artists(
+    session: Session,
+    ranked_artist_ids: list[str],
+    fetch_genres: Callable[[str], list[str]],
+) -> dict[str, float]:
+    """Build a normalized genre vector from ranked artist IDs."""
+
+    ranked_genres = [
+        get_or_fetch_artist_genres(
+            session,
+            artist_id,
+            fetch_genres,
+        )
+        for artist_id in ranked_artist_ids
+    ]
+
+    return build_genre_vector(ranked_genres)
 def build_genre_vector(
     ranked_genres: list[list[str]],
 ) -> dict[str, float]:
