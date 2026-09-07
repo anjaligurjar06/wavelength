@@ -64,13 +64,24 @@ def callback(code: str, db: Session = Depends(get_db)) -> dict[str, str]:
     email = profile.get("email", f"{spotify_id}@spotify.placeholder")
     display_name = profile.get("display_name", spotify_id)
 
+    refresh_token = token_response.json().get("refresh_token")
+
     user = db.scalar(select(User).where(User.spotify_id == spotify_id))
     if user is None:
-        user = User(spotify_id=spotify_id, email=email, display_name=display_name)
+        user = User(
+            spotify_id=spotify_id,
+            email=email,
+            display_name=display_name,
+            spotify_access_token=access_token,
+            spotify_refresh_token=refresh_token,
+        )
         db.add(user)
     else:
         user.email = email
         user.display_name = display_name
+        user.spotify_access_token = access_token
+        if refresh_token:
+            user.spotify_refresh_token = refresh_token
     db.commit()
     db.refresh(user)
 

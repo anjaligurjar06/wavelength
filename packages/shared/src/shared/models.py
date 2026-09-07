@@ -21,6 +21,8 @@ class User(Base):
     spotify_id: Mapped[str | None] = mapped_column(String(64), unique=True, nullable=True)
     email: Mapped[str] = mapped_column(String(255), unique=True)
     display_name: Mapped[str] = mapped_column(String(255))
+    spotify_access_token: Mapped[str | None] = mapped_column(String(512), nullable=True)
+    spotify_refresh_token: Mapped[str | None] = mapped_column(String(512), nullable=True)
     created_at: Mapped[datetime] = mapped_column(server_default=func.now())
 
     music_profile: Mapped[UserMusicProfile | None] = relationship(
@@ -34,6 +36,7 @@ class UserMusicProfile(Base):
     id: Mapped[str] = mapped_column(String(36), primary_key=True, default=_uuid)
     user_id: Mapped[str] = mapped_column(ForeignKey("users.id"), unique=True)
     top_artists: Mapped[dict] = mapped_column(JSON, default=dict)
+    top_tracks: Mapped[dict] = mapped_column(JSON, default=dict)
     top_genres: Mapped[dict] = mapped_column(JSON, default=dict)
     time_window: Mapped[str] = mapped_column(String(16), default="6m")
     is_stale: Mapped[bool] = mapped_column(default=False)

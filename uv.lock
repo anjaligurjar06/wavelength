@@ -69,8 +69,10 @@ source = { editable = "packages/api" }
 dependencies = [
     { name = "fastapi" },
     { name = "httpx" },
+    { name = "music-ingestion" },
     { name = "pydantic-settings" },
     { name = "pyjwt" },
+    { name = "shared" },
     { name = "uvicorn", extra = ["standard"] },
 ]
 
@@ -78,8 +80,10 @@ dependencies = [
 requires-dist = [
     { name = "fastapi", specifier = ">=0.115" },
     { name = "httpx", specifier = ">=0.27" },
+    { name = "music-ingestion", editable = "packages/music-ingestion" },
     { name = "pydantic-settings", specifier = ">=2.6" },
     { name = "pyjwt", specifier = ">=2.9" },
+    { name = "shared", editable = "packages/shared" },
     { name = "uvicorn", extras = ["standard"], specifier = ">=0.32" },
 ]
 

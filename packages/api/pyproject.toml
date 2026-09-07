@@ -9,6 +9,8 @@ dependencies = [
     "httpx>=0.27",
     "pyjwt>=2.9",
     "pydantic-settings>=2.6",
+    "shared",
+    "music-ingestion",
 ]
 
 [build-system]
@@ -17,3 +19,7 @@ build-backend = "hatchling.build"
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/api"]
+
+[tool.uv.sources]
+shared = { workspace = true }
+music-ingestion = { workspace = true }
