@@ -79,3 +79,27 @@ def test_profile_without_sync_returns_404(db_session):
         "/music/profile", headers={"Authorization": f"Bearer {token}"}
     )
     assert response.status_code == 404
+
+def test_manual_entry_saves_profile(db_session):
+    user = User(email="d@example.com", display_name="D")
+    db_session.add(user)
+    db_session.commit()
+
+    token = create_access_token(user.id)
+    response = client.post(
+        "/music/manual-entry",
+        json={"artists": ["Radiohead", "Björk"], "genres": ["art rock", "experimental"]},
+        headers={"Authorization": f"Bearer {token}"},
+    )
+    assert response.status_code == 200
+    assert response.json() == {"status": "saved"}
+
+    profile_response = client.get(
+        "/music/profile", headers={"Authorization": f"Bearer {token}"}
+    )
+    data = profile_response.json()
+    assert data["time_window"] == "manual"
+    assert data["top_genres"]["genres"] == ["art rock", "experimental"]
+    artist_names = [a["name"] for a in data["top_artists"]["items"]]
+    assert "Radiohead" in artist_names
+    assert "Björk" in artist_names

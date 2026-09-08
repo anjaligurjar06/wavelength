@@ -1,5 +1,6 @@
 from fastapi import APIRouter, Depends, HTTPException
 from music_ingestion.sync import sync_user_music_profile
+from pydantic import BaseModel
 from shared.models import User, UserMusicProfile
 from sqlalchemy.orm import Session
 
@@ -58,3 +59,29 @@ def get_genres(
     if profile is None:
         raise HTTPException(status_code=404, detail="No music profile found. Sync first.")
     return profile.top_genres
+
+class ManualEntryRequest(BaseModel):
+    artists: list[str]
+    genres: list[str]
+
+
+@router.post("/manual-entry")
+def manual_entry(
+    payload: ManualEntryRequest,
+    user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+) -> dict[str, str]:
+    profile = db.query(UserMusicProfile).filter_by(user_id=user.id).one_or_none()
+    if profile is None:
+        profile = UserMusicProfile(user_id=user.id)
+        db.add(profile)
+
+    profile.top_artists = {
+        "items": [{"id": None, "name": name, "genres": []} for name in payload.artists]
+    }
+    profile.top_genres = {"genres": sorted(set(payload.genres))}
+    profile.time_window = "manual"
+    profile.is_stale = False
+
+    db.commit()
+    return {"status": "saved"}
