@@ -37,6 +37,7 @@ class UserMusicProfile(Base):
     user_id: Mapped[str] = mapped_column(ForeignKey("users.id"), unique=True)
     top_artists: Mapped[dict] = mapped_column(JSON, default=dict)
     top_tracks: Mapped[dict] = mapped_column(JSON, default=dict)
+    recently_played: Mapped[dict] = mapped_column(JSON, default=dict)
     top_genres: Mapped[dict] = mapped_column(JSON, default=dict)
     time_window: Mapped[str] = mapped_column(String(16), default="6m")
     is_stale: Mapped[bool] = mapped_column(default=False)
