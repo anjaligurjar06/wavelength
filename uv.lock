@@ -69,6 +69,7 @@ source = { editable = "packages/api" }
 dependencies = [
     { name = "fastapi" },
     { name = "httpx" },
+    { name = "matching" },
     { name = "music-ingestion" },
     { name = "pydantic-settings" },
     { name = "pyjwt" },
@@ -80,6 +81,7 @@ dependencies = [
 requires-dist = [
     { name = "fastapi", specifier = ">=0.115" },
     { name = "httpx", specifier = ">=0.27" },
+    { name = "matching", editable = "packages/matching" },
     { name = "music-ingestion", editable = "packages/music-ingestion" },
     { name = "pydantic-settings", specifier = ">=2.6" },
     { name = "pyjwt", specifier = ">=2.9" },
@@ -307,6 +309,16 @@ wheels = [
 name = "matching"
 version = "0.1.0"
 source = { editable = "packages/matching" }
+dependencies = [
+    { name = "shared" },
+    { name = "sqlalchemy" },
+]
+
+[package.metadata]
+requires-dist = [
+    { name = "shared", editable = "packages/shared" },
+    { name = "sqlalchemy", specifier = ">=2.0" },
+]
 
 [[package]]
 name = "monetization"
