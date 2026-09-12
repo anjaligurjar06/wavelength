@@ -1,5 +1,4 @@
 import pytest
-
 from compatibility_engine.service import (
     get_compatibility_score,
     get_score_breakdown,
