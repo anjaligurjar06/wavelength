@@ -11,6 +11,8 @@ dependencies = [
     "pydantic-settings>=2.6",
     "shared",
     "music-ingestion",
+    "matching",
+    "compatibility-engine",
 ]
 
 [build-system]
@@ -23,3 +25,5 @@ packages = ["src/api"]
 [tool.uv.sources]
 shared = { workspace = true }
 music-ingestion = { workspace = true }
+matching = { workspace = true }
+compatibility-engine = { workspace = true }

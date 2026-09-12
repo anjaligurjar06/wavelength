@@ -23,6 +23,9 @@ class User(Base):
     display_name: Mapped[str] = mapped_column(String(255))
     spotify_access_token: Mapped[str | None] = mapped_column(String(512), nullable=True)
     spotify_refresh_token: Mapped[str | None] = mapped_column(String(512), nullable=True)
+    latitude: Mapped[float | None] = mapped_column(nullable=True)
+    longitude: Mapped[float | None] = mapped_column(nullable=True)
+    max_distance_km: Mapped[float] = mapped_column(default=50.0)
     created_at: Mapped[datetime] = mapped_column(server_default=func.now())
 
     music_profile: Mapped[UserMusicProfile | None] = relationship(
