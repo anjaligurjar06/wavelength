@@ -12,6 +12,7 @@ dependencies = [
     "shared",
     "music-ingestion",
     "matching",
+    "compatibility-engine",
 ]
 
 [build-system]
@@ -25,3 +26,4 @@ packages = ["src/api"]
 shared = { workspace = true }
 music-ingestion = { workspace = true }
 matching = { workspace = true }
+compatibility-engine = { workspace = true }

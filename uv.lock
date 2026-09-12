@@ -67,6 +67,7 @@ name = "api"
 version = "0.1.0"
 source = { editable = "packages/api" }
 dependencies = [
+    { name = "compatibility-engine" },
     { name = "fastapi" },
     { name = "httpx" },
     { name = "matching" },
@@ -79,6 +80,7 @@ dependencies = [
 
 [package.metadata]
 requires-dist = [
+    { name = "compatibility-engine", editable = "packages/compatibility-engine" },
     { name = "fastapi", specifier = ">=0.115" },
     { name = "httpx", specifier = ">=0.27" },
     { name = "matching", editable = "packages/matching" },
