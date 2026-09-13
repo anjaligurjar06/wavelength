@@ -250,6 +250,7 @@ def sync_manual_music_profile(
     if top_genres is not None:
         profile.top_genres = top_genres
 
+    profile.time_window = "manual"
     profile.is_stale = False
 
     db.commit()

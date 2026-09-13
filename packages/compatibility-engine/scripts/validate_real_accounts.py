@@ -1,7 +1,5 @@
 import json
 
-from sqlalchemy import create_engine, text
-
 from compatibility_engine.scoring import (
     adaptive_composite_score,
     adaptive_weights,
@@ -12,7 +10,7 @@ from compatibility_engine.similarity import (
     cosine_similarity,
     jaccard_similarity,
 )
-
+from sqlalchemy import create_engine, text
 
 DATABASE_URL = "postgresql+psycopg://wavelength:wavelength@localhost:5432/wavelength"
 
