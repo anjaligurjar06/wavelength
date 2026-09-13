@@ -1,550 +1,691 @@
-\# Cycle 4 — Compatibility Scoring Validation
+# Compatibility Score Validation & Weight Sanity Findings
 
+## 1. Objective
 
+The objective of D10–D11 was to validate the Compatibility Engine using real/test Spotify user accounts and check whether the generated compatibility score behaves as expected.
 
-\## Objective
+The validation focused on:
 
+* Comparing the music profiles of two Spotify accounts.
+* Manually verifying the actual overlap between their artists and tracks.
+* Comparing the manually verified overlap with the Compatibility Engine output.
+* Checking that artist similarity contributes correctly to the final score.
+* Checking the behavior when genre information is unavailable.
+* Verifying that missing genre data does not incorrectly create similarity.
+* Documenting the weight behavior and findings in D12.
 
+For this validation, two Spotify accounts were used.
 
-Validate the compatibility scoring logic and check whether the artist and
+---
 
-genre weights behave as expected.
+## 2. Test Accounts
 
+The validation was performed using two real/test Spotify profiles:
 
+| Account        | User ID                                | Time Window |
+| -------------- | -------------------------------------- | ----------- |
+| Simran Dhindsa | `355ce34a-5153-47e0-b241-05c42b6280e4` | 6 months    |
+| Sherlin        | `967d0652-3ed4-4b26-95df-22d7091b9cb6` | 6 months    |
 
-The Cycle 4 ML1 task is to validate scoring against real/test Spotify
+Both profiles were successfully synchronized with the music-ingestion service.
 
-accounts with manually verified expected overlap and to perform sanity
+The database showed:
 
-checks on the scoring weights.
+### Simran Dhindsa
 
+* Artists = 20
+* Tracks = 20
+* Recently Played = 20
 
+### Sherlin
 
-\## Scoring Model
+* Artists = 16
+* Tracks = 20
+* Recently Played = 3
 
+---
 
+## 3. Spotify Data Synchronization
 
-The MVP compatibility score combines two components:
+The Spotify data was synchronized using the `/music/sync` endpoint.
 
+The synchronization successfully stored the profiles in the `user_music_profiles` table.
 
+The resulting database state was:
 
-\- Artist overlap: 60%
+| user_id                                | time_window | is_stale |
+| -------------------------------------- | ----------- | -------- |
+| `355ce34a-5153-47e0-b241-05c42b6280e4` | `6m`        | `false`  |
+| `967d0652-3ed4-4b26-95df-22d7091b9cb6` | `6m`        | `false`  |
 
-\- Genre similarity: 40%
+This confirms that both profiles had successfully completed synchronization.
 
+---
 
+## 4. Profile Coverage
 
-Artist overlap is calculated using Jaccard similarity.
+The synchronized profiles contained the following data:
 
+### Simran Dhindsa
 
+* Top artists: 20
+* Top tracks: 20
+* Recently played: 20
 
-Genre similarity is calculated using cosine similarity.
+### Sherlin
 
+* Top artists: 16
+* Top tracks: 20
+* Recently played: 3
 
+Therefore, artist and track data were available for both accounts.
 
-The final compatibility score is calculated as:
+However, Spotify did not provide genre information for the artists in these profiles.
 
+The stored genre data was:
 
+```json
+{
+  "genres": []
+}
+```
 
-&#x20;   score = 0.60 × artist\_overlap + 0.40 × genre\_similarity
+for both users.
 
+---
 
+## 5. Manual Artist Overlap Verification
 
-The score is represented on a 0–1 scale by the scoring engine and can be
+The top artist lists were manually inspected before evaluating the Compatibility Engine result.
 
-converted to a 0–100 compatibility score by the service/API layer.
+### Simran's Artists
 
+The manually inspected list included:
 
+* Karan Aujla
+* Amrinder Gill
+* Diljit Dosanjh
+* Cheema Y
+* Harkirat Sangha
+* Pritam
+* Arjan Dhillon
+* Tarsem Jassar
+* ...
 
-\## Controlled Weight Sanity Checks
+### Sherlin's Artists
 
+The manually inspected list included:
 
+* Arijit Singh
+* Pritam
+* Talwiinder
+* KALAM INK
+* Anuv Jain
+* Ankit Tiwari
+* Sachin-Jigar
+* JENNIE
+* ...
 
-Controlled tests were performed to verify that the 60/40 weighting behaves
+The common artist identified manually was:
 
-as intended.
+**Pritam**
 
+Therefore:
 
+```text
+Shared artists = 1
+```
 
-\### Test 1 — Artist similarity only
+---
 
+## 6. Artist Similarity
 
+The Compatibility Engine uses Jaccard similarity for artist overlap.
 
-Input:
+The formula is:
 
+```text
+Jaccard Similarity =
+Number of common artists
+------------------------
+Number of unique artists in both profiles
+```
 
+For these profiles:
 
-\- Artist overlap = 1.0
+```text
+Common artists = 1
+Total unique artists = 35
+```
 
-\- Genre similarity = 0.0
+Therefore:
 
+```text
+Artist Jaccard = 1 / 35
+               = 0.0286
+```
 
+The engine produced:
 
-Calculation:
+```text
+Artist Jaccard : 0.0286
+Artist %       : 2.86%
+```
 
+This matches the manually verified overlap.
 
+Therefore, the artist similarity calculation is behaving correctly for this test.
 
-&#x20;   0.60 × 1.0 + 0.40 × 0.0 = 0.60
+---
 
+## 7. Track Overlap Verification
 
+The top-track lists were also compared.
 
-Result:
+The manual verification showed:
 
+```text
+Shared tracks = 0
+```
 
+The Compatibility Engine returned:
 
-&#x20;   Artist-only score = 0.60
+```text
+Track Jaccard : 0.0000
+Track %       : 0.00%
+```
 
+Therefore, the engine correctly reported no track similarity.
 
+Importantly, the absence of shared tracks did not artificially increase the compatibility score.
 
-\### Test 2 — Genre similarity only
+---
 
+## 8. Genre Similarity
 
+Genre information was checked for both users.
 
-Input:
+The database contained:
 
+```json
+{
+  "genres": []
+}
+```
 
+for both profiles.
 
-\- Artist overlap = 0.0
+Therefore, there was no usable genre information available for the Compatibility Engine.
 
-\- Genre similarity = 1.0
+The engine returned:
 
+```text
+Genre cosine = 0.0000
+```
 
+This is expected because there are no genre vectors to compare.
 
-Calculation:
+The engine therefore did not create artificial genre similarity.
 
+---
 
+## 9. Genre Coverage
 
-&#x20;   0.60 × 0.0 + 0.40 × 1.0 = 0.40
+The Compatibility Engine calculates genre coverage based on the fraction of artists for which genre metadata is available.
 
+For both users:
 
+```text
+Simran genre coverage = 0.0000
+Sherlin genre coverage = 0.0000
+```
 
-Result:
+Therefore:
 
+```text
+coverage_a = 0.0
+coverage_b = 0.0
+```
 
+The pair coverage is:
 
-&#x20;   Genre-only score = 0.40
+```text
+min(0.0, 0.0) = 0.0
+```
 
+This indicates that genre information is completely unavailable for this pair.
 
+---
 
-\### Test 3 — Both components at maximum
+## 10. Adaptive Weight Behavior
 
+The Compatibility Engine uses adaptive weights to handle missing genre information.
 
+The normal MVP weights are:
 
-Input:
+```text
+Artist weight = 0.60
+Genre weight  = 0.40
+```
 
+However, when genre coverage is missing, the genre contribution is reduced.
 
+The adaptive weighting logic uses the minimum genre coverage of the two users.
 
-\- Artist overlap = 1.0
+For this pair:
 
-\- Genre similarity = 1.0
+```text
+coverage_a = 0.0
+coverage_b = 0.0
 
+pair_coverage = min(0.0, 0.0)
+              = 0.0
+```
 
+Therefore:
 
-Calculation:
+```text
+Genre weight = 0.40 × 0.0
+             = 0.00
 
+Artist weight = 1.00 - 0.00
+              = 1.00
+```
 
+The actual result was:
 
-&#x20;   0.60 × 1.0 + 0.40 × 1.0 = 1.00
+```text
+Artist weight: 1.00
+Genre weight : 0.00
+```
 
+This is the expected behavior.
 
+Since there is no reliable genre data, the engine relies entirely on artist similarity rather than treating missing genre data as similarity.
 
-Result:
+---
 
+## 11. Final Compatibility Score
 
+The adaptive composite score is calculated using:
 
-&#x20;   Maximum score = 1.00
+```text
+Final Score =
+Artist Weight × Artist Similarity
++
+Genre Weight × Genre Similarity
+```
 
+For this test:
 
+```text
+Artist weight = 1.00
+Artist similarity = 0.0286
 
-\### Controlled Weight Finding
+Genre weight = 0.00
+Genre similarity = 0.0000
+```
 
+Therefore:
 
+```text
+Final Score =
+1.00 × 0.0286
++
+0.00 × 0.0000
 
-The results confirm that artist overlap has a larger influence on the final
+= 0.0286
+```
 
-compatibility score than genre similarity.
+The Compatibility Engine produced:
 
+```text
+Final Compatibility Score = 0.0286
+Score = 2.86 / 100
+```
 
+---
 
-A completely matching artist profile contributes 0.60 to the score, while a
+## 12. Manual vs Engine Comparison
 
-completely matching genre profile contributes 0.40.
+| Metric                   |     Manual Verification | Engine Result |
+| ------------------------ | ----------------------: | ------------: |
+| Shared artists           |                       1 |             1 |
+| Artist Jaccard           |                  0.0286 |        0.0286 |
+| Artist percentage        |                   2.86% |         2.86% |
+| Shared tracks            |                       0 |             0 |
+| Track Jaccard            |                  0.0000 |        0.0000 |
+| Genre data               |                   Empty |         Empty |
+| Genre similarity         |           Not available |        0.0000 |
+| Genre coverage – Simran  |                     0.0 |           0.0 |
+| Genre coverage – Sherlin |                     0.0 |           0.0 |
+| Artist weight            |           Expected 1.00 |          1.00 |
+| Genre weight             |           Expected 0.00 |          0.00 |
+| Final score              |      Expected low score |        0.0286 |
+| Final percentage         | Expected low similarity |      2.86/100 |
 
+The manually verified overlap is consistent with the Compatibility Engine output.
 
+---
 
-This matches the intended 60% artist and 40% genre weighting.
+## 13. Weight Sanity Testing
 
+In addition to real Spotify data validation, the scoring functions were tested directly to verify the intended weight behavior.
 
+The Compatibility Engine currently uses:
 
-\## Adaptive Weight Sanity Checks
+```text
+ARTIST_WEIGHT = 0.60
+GENRE_WEIGHT = 0.40
+```
 
+### Artist-only Test
 
+A test was performed where only artist similarity was present:
 
-The scoring engine also adjusts the weights when genre metadata is
+```text
+artist_overlap = 1.0
+genre_similarity = 0.0
+```
 
-incomplete.
+The expected score was:
 
+```text
+0.60 × 1.0 + 0.40 × 0.0
+= 0.60
+```
 
+The test confirmed:
 
-The adaptive weighting uses the lower genre coverage between the two users
+```text
+Artist-only score = 0.60
+```
 
-as the pair coverage.
+### Genre-only Test
 
+A second test used only genre similarity:
 
+```text
+artist_overlap = 0.0
+genre_similarity = 1.0
+```
 
-\### Test 1 — Full genre coverage
+The expected score was:
 
+```text
+0.60 × 0.0 + 0.40 × 1.0
+= 0.40
+```
 
+The test confirmed:
 
-Input:
+```text
+Genre-only score = 0.40
+```
 
+Therefore:
 
+```text
+Artist-only score > Genre-only score
+```
 
-\- User A genre coverage = 1.0
+This confirms that the current scoring system gives greater importance to artist similarity.
 
-\- User B genre coverage = 1.0
+---
 
+## 14. Adaptive Weight Testing
 
+The adaptive scoring tests also verified behavior when genre coverage is incomplete.
 
-Result:
+### Full Genre Coverage
 
+For full genre coverage:
 
+```text
+coverage_a = 1.0
+coverage_b = 1.0
+```
 
-&#x20;   Artist weight = 0.60
+the engine retains:
 
-&#x20;   Genre weight = 0.40
+```text
+Artist weight = 0.60
+Genre weight = 0.40
+```
 
+### Low Genre Coverage
 
+For low genre coverage, the genre weight is reduced and the artist weight increases.
 
-This preserves the normal 60/40 weighting.
+For example:
 
+```text
+coverage_a = 0.25
+coverage_b = 1.0
+```
 
+The pair coverage becomes:
 
-\### Test 2 — No genre coverage
+```text
+min(0.25, 1.0) = 0.25
+```
 
+The resulting tested weights were:
 
+```text
+Artist weight = 0.90
+Genre weight = 0.10
+```
 
-Input:
+This confirms that the engine adapts its weights based on available genre metadata.
 
+---
 
+## 15. Manual Genre Fallback
 
-\- User A genre coverage = 0.0
+The engine contains a manual genre fallback mechanism.
 
-\- User B genre coverage = 0.0
+The default fallback threshold is:
 
+```text
+0.30
+```
 
+The fallback is triggered when the pair's minimum genre coverage is below this threshold.
 
-Result:
+For the tested accounts:
 
+```text
+Simran coverage = 0.00
+Sherlin coverage = 0.00
+```
 
+Therefore:
 
-&#x20;   Artist weight = 1.00
+```text
+pair coverage = 0.00
+```
 
-&#x20;   Genre weight = 0.00
+Since:
 
+```text
+0.00 < 0.30
+```
 
+the engine correctly reported:
 
-This prevents unavailable genre information from reducing the score.
+```text
+Manual genre fallback:
+Needed = True
+```
 
+This is expected because there is insufficient genre metadata to produce a reliable genre-based similarity score.
 
+---
 
-\### Test 3 — 50% genre coverage
+## 16. Weight Sanity Findings
 
+The validation produced the following findings.
 
+### Finding 1 — Artist overlap is correctly calculated
 
-Input:
+The two tested users had one common artist:
 
+```text
+Pritam
+```
 
+The Compatibility Engine calculated:
 
-\- User A genre coverage = 0.5
+```text
+Jaccard = 0.0286
+```
 
-\- User B genre coverage = 0.5
+which matches the manually calculated value.
 
+**Result: PASS**
 
+---
 
-Result:
+### Finding 2 — No track overlap produces no track similarity
 
+The users had no common tracks.
 
+The engine returned:
 
-&#x20;   Artist weight = 0.80
+```text
+Track Jaccard = 0.0000
+```
 
-&#x20;   Genre weight = 0.20
+Therefore, no artificial track similarity was introduced.
 
+**Result: PASS**
 
+---
 
-The genre contribution is reduced because only half of the genre metadata is
+### Finding 3 — Missing genre data does not create similarity
 
-available.
+Both profiles contained empty genre data.
 
+The engine returned:
 
+```text
+Genre cosine = 0.0000
+```
 
-\### Adaptive Weight Finding
+Therefore, missing genre information does not incorrectly increase the compatibility score.
 
+**Result: PASS**
 
+---
 
-The adaptive weighting behaves as intended.
+### Finding 4 — Adaptive weighting handles missing genres
 
+Because both users had zero genre coverage:
 
+```text
+Artist weight = 1.00
+Genre weight = 0.00
+```
 
-When genre information is incomplete, the system reduces the contribution of
+The engine correctly shifted the scoring weight toward the available artist data.
 
-genre similarity and shifts the weight toward artist overlap. This prevents
+**Result: PASS**
 
-missing genre metadata from having an unnecessarily large effect on the
+---
 
-compatibility score.
+### Finding 5 — Artist similarity has higher default importance
 
+The scoring tests confirmed:
 
+```text
+Artist-only score = 0.60
+Genre-only score = 0.40
+```
 
-\## Automated Test Validation
+Therefore, the current MVP weighting gives more importance to artists.
 
+**Result: PASS**
 
+---
 
-The compatibility-engine automated tests were executed successfully.
+### Finding 6 — Manual genre fallback is correctly triggered
 
+Because genre coverage was below the configured threshold:
 
+```text
+Fallback = True
+```
 
-\### Scoring tests
+This indicates that the engine correctly detects insufficient genre information.
 
+**Result: PASS**
 
+---
 
-&#x20;   21 passed
+## 17. Final Validation Result
 
+The final real-account result was:
 
+```text
+==================================================
+Simran <-> Sherlin
+==================================================
 
-\### Service tests
+Artists:
+Simran = 20
+Sherlin = 16
 
+Tracks:
+Simran = 20
+Sherlin = 20
 
+Shared artists:
+Pritam
 
-&#x20;   6 passed
+Artist Jaccard:
+0.0286
 
+Shared tracks:
+None
 
+Track Jaccard:
+0.0000
 
-\### Total compatibility-engine tests
+Genre similarity:
+0.0000
 
+Genre coverage:
+Simran = 0.0000
+Sherlin = 0.0000
 
+Adaptive weights:
+Artist = 1.00
+Genre  = 0.00
 
-&#x20;   27 passed
+Final compatibility:
+0.0286
 
+Final compatibility percentage:
+2.86 / 100
 
+Manual genre fallback:
+True
+```
 
-The tests cover the scoring calculations, score breakdown, recomputation,
+---
 
-stored scores, and service behavior.
+## 18. Conclusion
 
+The Compatibility Engine successfully passed the initial real-account validation using two Spotify profiles.
 
+The manually verified artist overlap matched the calculated Jaccard similarity. The engine also correctly returned zero similarity when there were no shared tracks and no usable genre metadata.
 
-\## Real Spotify Account Validation
+The adaptive weighting mechanism behaved as expected by shifting the entire score toward artist similarity when genre coverage was unavailable. The weight tests also confirmed that artist similarity has a stronger default contribution than genre similarity.
 
+The validation therefore indicates that the current scoring logic is behaving consistently with the intended MVP design.
 
+However, the current test also highlights an important limitation: Spotify genre metadata was empty for both tested accounts, so genre-based scoring could not be meaningfully validated using these accounts. The manual genre fallback correctly identified this limitation.
 
-The Cycle 4 requirement includes validation using real/test Spotify accounts
-
-with manually verified expected overlap.
-
-
-
-Two Spotify test accounts are currently available:
-
-
-
-\- User 1: Simran Dhindsa
-
-\- User 2: Muskan Katoch
-
-
-
-Both users are present in the Wavelength PostgreSQL database and both have
-
-Spotify access and refresh tokens stored.
-
-
-
-\### Current Real-Data Status
-
-
-
-Real Spotify account validation is currently pending because the
-
-`POST /music/sync` endpoint is returning an `Internal Server Error`.
-
-
-
-Therefore, real Spotify profile data has not yet been successfully populated
-
-through the current ingestion endpoint for this validation.
-
-
-
-No real-account score comparison is being claimed until the Spotify data is
-
-successfully available in the database.
-
-
-
-\## Manual Validation Table
-
-
-
-The following table will be completed once the Spotify profiles are available
-
-from the database.
-
-
-
-| User Pair | Shared Artists | Artist Jaccard | Genre Similarity | Expected Score | API Score | Difference |
-
-|-----------|----------------|----------------|------------------|----------------|----------|------------|
-
-| Simran / Muskan | TBD | TBD | TBD | TBD | TBD | TBD |
-
-
-
-Expected score will be calculated manually using:
-
-
-
-&#x20;   Expected score =
-
-&#x20;       0.60 × Artist Jaccard
-
-&#x20;       + 0.40 × Genre Similarity
-
-
-
-The manually calculated score will then be compared with the score returned by
-
-the compatibility service/API.
-
-
-
-\## D10–D11 Validation Status
-
-
-
-\### D10 — Cross-validation of scoring
-
-
-
-Controlled scoring and weight behavior have been successfully validated.
-
-
-
-Real Spotify account cross-validation remains pending because the current
-
-music ingestion endpoint is returning an Internal Server Error.
-
-
-
-\### D11 — Real/test account comparison
-
-
-
-Two real/test Spotify accounts have been prepared for comparison:
-
-
-
-\- Simran Dhindsa
-
-\- Muskan Katoch
-
-
-
-The database contains both users and their Spotify credentials. The final
-
-comparison will be performed after their Spotify music profiles are available
-
-in the database.
-
-
-
-\## D12 — Weight Sanity Findings
-
-
-
-The controlled tests confirm that the intended scoring behavior is correct.
-
-
-
-The standard scoring weights are:
-
-
-
-\- Artist overlap = 60%
-
-\- Genre similarity = 40%
-
-
-
-The tests confirmed:
-
-
-
-\- Artist-only similarity produces a score of 0.60.
-
-\- Genre-only similarity produces a score of 0.40.
-
-\- Full similarity in both components produces a score of 1.00.
-
-\- Full genre coverage preserves the 60/40 weighting.
-
-\- No genre coverage shifts the weights to 100% artist and 0% genre.
-
-\- 50% genre coverage produces 80% artist and 20% genre weighting.
-
-
-
-Therefore, artist similarity has the stronger influence on the compatibility
-
-score, as intended, while incomplete genre metadata is handled through
-
-adaptive weighting.
-
-
-
-\## Final Status
-
-
-
-\### Completed
-
-
-
-\- Compatibility scoring implementation validated.
-
-\- Artist Jaccard similarity validated through automated tests.
-
-\- Genre cosine similarity validated through automated tests.
-
-\- 60/40 artist/genre weighting validated.
-
-\- Adaptive weighting behavior validated.
-
-\- Compatibility-engine scoring tests passed.
-
-\- Compatibility-engine service tests passed.
-
-\- D12 weight sanity findings documented.
-
-
-
-\### Pending
-
-
-
-\- Successful Spotify music synchronization.
-
-\- Extraction of real Spotify profile data from the database.
-
-\- Manual verification of artist overlap for the two test users.
-
-\- Manual calculation of expected real-account scores.
-
-\- Comparison of expected scores against API scores.
-
-
-
-The real-account validation will be added to this document once the
-
-music-ingestion endpoint is working successfully.
+---
 
