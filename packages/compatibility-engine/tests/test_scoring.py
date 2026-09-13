@@ -197,3 +197,40 @@ def test_manual_fallback_uses_custom_threshold():
         0.8,
         threshold=0.5,
     ) is True
+def test_artist_weight_is_stronger_than_genre_weight():
+    artist_only_score = composite_score(
+        artist_overlap=1.0,
+        genre_similarity=0.0,
+    )
+
+    genre_only_score = composite_score(
+        artist_overlap=0.0,
+        genre_similarity=1.0,
+    )
+
+    assert artist_only_score == pytest.approx(0.60)
+    assert genre_only_score == pytest.approx(0.40)
+    assert artist_only_score > genre_only_score
+
+
+def test_full_coverage_uses_60_40_weights():
+    score = adaptive_composite_score(
+        artist_overlap=0.8,
+        genre_similarity=0.5,
+        coverage_a=1.0,
+        coverage_b=1.0,
+    )
+
+    expected = (0.60 * 0.8) + (0.40 * 0.5)
+
+    assert score == pytest.approx(expected)
+
+
+def test_missing_genres_shift_weight_to_artists():
+    artist_weight, genre_weight = adaptive_weights(
+        coverage_a=0.25,
+        coverage_b=1.0,
+    )
+
+    assert artist_weight == pytest.approx(0.90)
+    assert genre_weight == pytest.approx(0.10)

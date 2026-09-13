@@ -45,13 +45,16 @@ def test_sync_calls_spotify_and_persists_profile(db_session):
         "items": [{"id": "a1", "name": "Artist One", "genres": ["pop"]}]
     }
     fake_tracks = {"items": []}
-
+    fake_recently_played = {"items": []}
     with patch(
         "music_ingestion.spotify_client.SpotifyClient.get_top_artists",
         return_value=fake_artists,
     ), patch(
         "music_ingestion.spotify_client.SpotifyClient.get_top_tracks",
         return_value=fake_tracks,
+    ), patch(
+        "music_ingestion.spotify_client.SpotifyClient.get_recently_played",
+        return_value=fake_recently_played,
     ):
         response = client.post(
             "/music/sync", headers={"Authorization": f"Bearer {token}"}
