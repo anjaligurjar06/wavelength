@@ -13,6 +13,7 @@ dependencies = [
     "music-ingestion",
     "matching",
     "compatibility-engine",
+    "redis>=5.0",
 ]
 
 [build-system]
