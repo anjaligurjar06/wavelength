@@ -9,6 +9,6 @@ class Settings(BaseSettings):
     spotify_redirect_uri: str
     jwt_secret: str
     database_url: str
-
+    frontend_url: str = "http://localhost:3000"
 
 settings = Settings()

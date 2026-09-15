@@ -35,7 +35,7 @@ def authorize() -> RedirectResponse:
 
 
 @router.get("/callback")
-def callback(code: str, db: Session = Depends(get_db)) -> dict[str, str]:
+def callback(code: str, db: Session = Depends(get_db)) -> RedirectResponse:
     token_response = httpx.post(
         SPOTIFY_TOKEN_URL,
         data={
@@ -86,4 +86,5 @@ def callback(code: str, db: Session = Depends(get_db)) -> dict[str, str]:
     db.refresh(user)
 
     jwt_token = create_access_token(user.id)
-    return {"access_token": jwt_token, "user_id": user.id}
+    redirect_url = f"{settings.frontend_url}/auth/callback?token={jwt_token}&user_id={user.id}"
+    return RedirectResponse(redirect_url)
