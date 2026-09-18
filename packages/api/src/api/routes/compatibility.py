@@ -1,4 +1,5 @@
 from compatibility_engine.service import (
+    get_score_breakdown_explanation,
     get_score_breakdown,
     get_stored_compatibility_score,
     recompute_compatibility_score,
@@ -46,6 +47,26 @@ def get_breakdown(
         raise HTTPException(status_code=404, detail=str(exc)) from exc
 
     return breakdown
+
+@router.get("/score/{candidate_id}/explanation")
+def get_explanation(
+    candidate_id: str,
+    user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+) -> dict:
+    try:
+        explanation = get_score_breakdown_explanation(
+            db,
+            user.id,
+            candidate_id,
+        )
+    except ValueError as exc:
+        raise HTTPException(
+            status_code=404,
+            detail=str(exc),
+        ) from exc
+
+    return explanation
 
 
 @router.post("/recompute")
