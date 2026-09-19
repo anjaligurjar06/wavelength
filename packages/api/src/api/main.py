@@ -1,6 +1,6 @@
-from api.routes import chat
 from fastapi import FastAPI
 
+from api.routes import chat
 from api.routes.auth import router as auth_router
 from api.routes.compatibility import router as compatibility_router
 from api.routes.matching import router as matching_router

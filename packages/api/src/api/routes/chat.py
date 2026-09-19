@@ -1,4 +1,4 @@
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
@@ -82,7 +82,7 @@ def list_threads(
         )
 
     result.sort(
-        key=lambda t: t.last_message_at or datetime.min.replace(tzinfo=timezone.utc),
+        key=lambda t: t.last_message_at or datetime.min.replace(tzinfo=UTC),
         reverse=True,
     )
     return result
@@ -126,7 +126,7 @@ def send_message(
         thread_id=thread_id,
         sender_id=user.id,
         content=payload.content.strip(),
-        sent_at=datetime.now(timezone.utc),
+        sent_at=datetime.now(UTC),
     )
     db.add(message)
     db.commit()
