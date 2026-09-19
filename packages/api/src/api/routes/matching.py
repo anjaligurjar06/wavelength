@@ -54,6 +54,8 @@ def update_filters(
         longitude=user.longitude,
         max_distance_km=user.max_distance_km,
     )
+
+
 @router.get("/feed")
 def get_matching_feed(
     user: User = Depends(get_current_user),

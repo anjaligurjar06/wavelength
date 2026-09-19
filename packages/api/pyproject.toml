@@ -13,6 +13,7 @@ dependencies = [
     "music-ingestion",
     "matching",
     "compatibility-engine",
+    "chat",
     "redis>=5.0",
 ]
 
@@ -28,3 +29,4 @@ shared = { workspace = true }
 music-ingestion = { workspace = true }
 matching = { workspace = true }
 compatibility-engine = { workspace = true }
+chat = { workspace = true }
