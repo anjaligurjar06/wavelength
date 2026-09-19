@@ -15,6 +15,7 @@ from matching.distance import is_within_distance
 @dataclass(frozen=True)
 class RankedCandidate:
     user_id: str
+    display_name: str   
     score: float
 
 
@@ -91,6 +92,7 @@ def build_ranked_feed(
         ranked_candidates.append(
             RankedCandidate(
                 user_id=candidate.id,
+                display_name=candidate.display_name,
                 score=score,
             )
         )

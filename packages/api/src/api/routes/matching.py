@@ -78,6 +78,7 @@ def get_matching_feed(
     return [
         {
             "candidate_id": candidate.user_id,
+            "display_name": candidate.display_name,
             "score": candidate.score,
         }
         for candidate in ranked_candidates

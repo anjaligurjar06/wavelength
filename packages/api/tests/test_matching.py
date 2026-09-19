@@ -167,3 +167,8 @@ def test_matching_feed_returns_candidates_sorted_by_score(db_session):
         82.0,
         70.0,
     ]
+    assert [candidate["display_name"] for candidate in data] == [
+        candidate_b.display_name,
+        candidate_c.display_name,
+        candidate_a.display_name,
+    ]
