@@ -172,3 +172,98 @@ def test_matching_feed_returns_candidates_sorted_by_score(db_session):
         candidate_c.display_name,
         candidate_a.display_name,
     ]
+def test_like_candidate_without_mutual_like(db_session):
+    user_a = User(
+        email="like-a@example.com",
+        display_name="Like A",
+    )
+    user_b = User(
+        email="like-b@example.com",
+        display_name="Like B",
+    )
+
+    db_session.add_all([user_a, user_b])
+    db_session.commit()
+
+    token_a = create_access_token(user_a.id)
+
+    response = client.post(
+        f"/matching/{user_b.id}/like",
+        headers={"Authorization": f"Bearer {token_a}"},
+    )
+
+    assert response.status_code == 200
+
+    data = response.json()
+
+    assert data["action"] == "like"
+    assert data["matched"] is False
+    assert data["match_id"] is None
+
+
+def test_pass_candidate(db_session):
+    user_a = User(
+        email="pass-a@example.com",
+        display_name="Pass A",
+    )
+    user_b = User(
+        email="pass-b@example.com",
+        display_name="Pass B",
+    )
+
+    db_session.add_all([user_a, user_b])
+    db_session.commit()
+
+    token_a = create_access_token(user_a.id)
+
+    response = client.post(
+        f"/matching/{user_b.id}/pass",
+        headers={"Authorization": f"Bearer {token_a}"},
+    )
+
+    assert response.status_code == 200
+
+    data = response.json()
+
+    assert data["action"] == "pass"
+    assert data["matched"] is False
+    assert data["match_id"] is None
+
+
+def test_mutual_like_creates_match(db_session):
+    user_a = User(
+        email="mutual-a@example.com",
+        display_name="Mutual A",
+    )
+    user_b = User(
+        email="mutual-b@example.com",
+        display_name="Mutual B",
+    )
+
+    db_session.add_all([user_a, user_b])
+    db_session.commit()
+
+    token_a = create_access_token(user_a.id)
+    token_b = create_access_token(user_b.id)
+
+    first_response = client.post(
+        f"/matching/{user_b.id}/like",
+        headers={"Authorization": f"Bearer {token_a}"},
+    )
+
+    assert first_response.status_code == 200
+    assert first_response.json()["matched"] is False
+    assert first_response.json()["match_id"] is None
+
+    second_response = client.post(
+        f"/matching/{user_a.id}/like",
+        headers={"Authorization": f"Bearer {token_b}"},
+    )
+
+    assert second_response.status_code == 200
+
+    data = second_response.json()
+
+    assert data["action"] == "like"
+    assert data["matched"] is True
+    assert data["match_id"] is not None
