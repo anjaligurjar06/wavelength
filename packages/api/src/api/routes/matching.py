@@ -1,12 +1,13 @@
-from compatibility_engine.service import recompute_compatibility_score
 from fastapi import APIRouter, Depends
-from matching.distance import is_within_distance
+from matching.feed import build_ranked_feed
 from pydantic import BaseModel
-from shared.models import User, UserMusicProfile
+from redis import Redis
+from shared.models import User
 from sqlalchemy.orm import Session
 
 from api.db import get_db
 from api.deps import get_current_user
+from api.redis import get_redis
 
 router = APIRouter(prefix="/matching", tags=["matching"])
 
@@ -56,41 +57,31 @@ def update_filters(
 
 
 @router.get("/feed")
-def get_feed(
+def get_matching_feed(
     user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
+    redis_client: Redis = Depends(get_redis),
 ) -> list[dict]:
-    candidates = db.query(User).filter(User.id != user.id).all()
+    """Return distance-filtered candidates ranked by compatibility."""
 
-    feed = []
-    for candidate in candidates:
-        if not is_within_distance(
-            user.latitude,
-            user.longitude,
-            candidate.latitude,
-            candidate.longitude,
-            user.max_distance_km,
-        ):
-            continue
+    candidates = (
+        db.query(User)
+        .filter(User.id != user.id)
+        .all()
+    )
 
-        candidate_profile = (
-            db.query(UserMusicProfile).filter_by(user_id=candidate.id).one_or_none()
-        )
-        if candidate_profile is None:
-            continue
+    ranked_candidates = build_ranked_feed(
+        db,
+        redis_client,
+        user,
+        candidates,
+    )
 
-        try:
-            score_record = recompute_compatibility_score(db, user.id, candidate.id)
-        except ValueError:
-            continue
-
-        feed.append(
-            {
-                "candidate_id": candidate.id,
-                "display_name": candidate.display_name,
-                "score": score_record.score,
-            }
-        )
-
-    feed.sort(key=lambda entry: entry["score"], reverse=True)
-    return feed
+    return [
+        {
+            "candidate_id": candidate.user_id,
+            "display_name": candidate.display_name,
+            "score": candidate.score,
+        }
+        for candidate in ranked_candidates
+    ]

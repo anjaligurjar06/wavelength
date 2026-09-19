@@ -14,6 +14,7 @@ dependencies = [
     "matching",
     "compatibility-engine",
     "chat",
+    "redis>=5.0",
 ]
 
 [build-system]

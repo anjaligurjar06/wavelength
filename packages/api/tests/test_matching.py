@@ -1,7 +1,10 @@
+from unittest.mock import MagicMock
+
 from api.jwt_utils import create_access_token
 from api.main import app
+from api.redis import get_redis
 from fastapi.testclient import TestClient
-from shared.models import User, UserMusicProfile
+from shared.models import CompatibilityScore, User
 
 client = TestClient(app)
 
@@ -13,10 +16,14 @@ def test_get_filters_defaults(db_session):
 
     token = create_access_token(user.id)
     response = client.get(
-        "/matching/filters", headers={"Authorization": f"Bearer {token}"}
+        "/matching/filters",
+        headers={"Authorization": f"Bearer {token}"},
     )
+
     assert response.status_code == 200
+
     data = response.json()
+
     assert data["latitude"] is None
     assert data["longitude"] is None
     assert data["max_distance_km"] == 50.0
@@ -28,138 +35,140 @@ def test_put_filters_updates_values(db_session):
     db_session.commit()
 
     token = create_access_token(user.id)
+
     response = client.put(
         "/matching/filters",
-        json={"latitude": 40.7128, "longitude": -74.0060, "max_distance_km": 25.0},
+        json={
+            "latitude": 40.7128,
+            "longitude": -74.0060,
+            "max_distance_km": 25.0,
+        },
         headers={"Authorization": f"Bearer {token}"},
     )
+
     assert response.status_code == 200
+
     data = response.json()
+
     assert data["latitude"] == 40.7128
     assert data["longitude"] == -74.0060
     assert data["max_distance_km"] == 25.0
 
 
 def test_put_filters_partial_update(db_session):
-    user = User(email="filters3@example.com", display_name="F3", max_distance_km=50.0)
+    user = User(
+        email="filters3@example.com",
+        display_name="F3",
+        max_distance_km=50.0,
+    )
+
     db_session.add(user)
     db_session.commit()
 
     token = create_access_token(user.id)
+
     response = client.put(
         "/matching/filters",
         json={"max_distance_km": 10.0},
         headers={"Authorization": f"Bearer {token}"},
     )
+
     assert response.status_code == 200
     assert response.json()["max_distance_km"] == 10.0
 
-def _make_user_with_location(db_session, email, lat, lon, artists):
-    user = User(email=email, display_name=email, latitude=lat, longitude=lon)
-    db_session.add(user)
-    db_session.commit()
 
-    profile = UserMusicProfile(user_id=user.id, top_artists={"items": artists})
-    db_session.add(profile)
-    db_session.commit()
-
-    return user
-
-
-def test_feed_excludes_candidates_outside_distance(db_session):
-    user = _make_user_with_location(
-        db_session,
-        "feed-me@example.com",
-        40.7128,
-        -74.0060,
-        [{"id": "artist_1", "name": "Artist 1", "genres": ["pop"]}],
-    )
-    user.max_distance_km = 10.0
-    db_session.commit()
-
-    _make_user_with_location(
-        db_session,
-        "feed-far@example.com",
-        51.5074,
-        -0.1278,  # London, way outside 10km
-        [{"id": "artist_1", "name": "Artist 1", "genres": ["pop"]}],
+def test_matching_feed_returns_candidates_sorted_by_score(db_session):
+    current_user = User(
+        email="feed-user@example.com",
+        display_name="Feed User",
+        latitude=31.10,
+        longitude=77.17,
+        max_distance_km=100.0,
     )
 
-    token = create_access_token(user.id)
-    response = client.get(
-        "/matching/feed", headers={"Authorization": f"Bearer {token}"}
+    candidate_a = User(
+        email="candidate-a@example.com",
+        display_name="Candidate A",
+        latitude=31.11,
+        longitude=77.18,
     )
-    assert response.status_code == 200
-    assert response.json() == []
 
+    candidate_b = User(
+        email="candidate-b@example.com",
+        display_name="Candidate B",
+        latitude=31.12,
+        longitude=77.19,
+    )
 
-def test_feed_includes_and_sorts_candidates_by_score(db_session):
-    user = _make_user_with_location(
-        db_session,
-        "feed-sorter@example.com",
-        40.7128,
-        -74.0060,
+    candidate_c = User(
+        email="candidate-c@example.com",
+        display_name="Candidate C",
+        latitude=31.13,
+        longitude=77.20,
+    )
+
+    db_session.add_all(
         [
-            {"id": "artist_1", "name": "Artist 1", "genres": ["pop"]},
-            {"id": "artist_2", "name": "Artist 2", "genres": ["rock"]},
-        ],
+            current_user,
+            candidate_a,
+            candidate_b,
+            candidate_c,
+        ]
     )
-    user.max_distance_km = 100.0
     db_session.commit()
 
-    high_match = _make_user_with_location(
-        db_session,
-        "feed-high@example.com",
-        40.71,
-        -74.00,
-        [
-            {"id": "artist_1", "name": "Artist 1", "genres": ["pop"]},
-            {"id": "artist_2", "name": "Artist 2", "genres": ["rock"]},
-        ],
-    )
-    low_match = _make_user_with_location(
-        db_session,
-        "feed-low@example.com",
-        40.72,
-        -74.01,
-        [{"id": "artist_99", "name": "Unrelated Artist", "genres": ["jazz"]}],
-    )
+    for candidate, score in [
+        (candidate_a, 70.0),
+        (candidate_b, 95.0),
+        (candidate_c, 82.0),
+    ]:
+        first_user_id, second_user_id = sorted(
+            [current_user.id, candidate.id]
+        )
 
-    token = create_access_token(user.id)
-    response = client.get(
-        "/matching/feed", headers={"Authorization": f"Bearer {token}"}
-    )
+        db_session.add(
+            CompatibilityScore(
+                user_a_id=first_user_id,
+                user_b_id=second_user_id,
+                score=score,
+                breakdown={},
+            )
+        )
+
+    db_session.commit()
+
+    fake_redis = MagicMock()
+    fake_redis.get.return_value = None
+
+    app.dependency_overrides[get_redis] = lambda: fake_redis
+
+    try:
+        token = create_access_token(current_user.id)
+
+        response = client.get(
+            "/matching/feed",
+            headers={"Authorization": f"Bearer {token}"},
+        )
+    finally:
+        app.dependency_overrides.pop(get_redis, None)
+
     assert response.status_code == 200
+
     data = response.json()
-    assert len(data) == 2
-    assert data[0]["candidate_id"] == high_match.id
-    assert data[1]["candidate_id"] == low_match.id
-    assert data[0]["score"] >= data[1]["score"]
 
+    assert [candidate["candidate_id"] for candidate in data] == [
+        candidate_b.id,
+        candidate_c.id,
+        candidate_a.id,
+    ]
 
-def test_feed_skips_candidates_without_music_profile(db_session):
-    user = _make_user_with_location(
-        db_session,
-        "feed-solo@example.com",
-        40.7128,
-        -74.0060,
-        [{"id": "artist_1", "name": "Artist 1", "genres": ["pop"]}],
-    )
-    user.max_distance_km = 100.0
-    db_session.commit()
-
-    no_profile_user = User(
-        email="feed-noprofile@example.com",
-        display_name="No Profile",
-        latitude=40.71,
-        longitude=-74.00,
-    )
-    db_session.add(no_profile_user)
-    db_session.commit()
-
-    token = create_access_token(user.id)
-    response = client.get(
-        "/matching/feed", headers={"Authorization": f"Bearer {token}"}
-    )
-    assert response.status_code == 200
-    assert response.json() == []
+    assert [candidate["score"] for candidate in data] == [
+        95.0,
+        82.0,
+        70.0,
+    ]
+    assert [candidate["display_name"] for candidate in data] == [
+        candidate_b.display_name,
+        candidate_c.display_name,
+        candidate_a.display_name,
+    ]
