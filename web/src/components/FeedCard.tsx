@@ -1,11 +1,20 @@
 "use client";
+import { apiFetch } from "@/lib/api";
 import { useState } from "react";
 import type { FeedCandidate, ScoreBreakdown } from "@/types/compatibility";
 
-export function FeedCard({ candidate }: { candidate: FeedCandidate }) {
+interface FeedCardProps {
+  candidate: FeedCandidate;
+  onMatched?: (matchId: string, threadId: string) => void;
+  onDismissed?: () => void;
+}
+
+export function FeedCard({ candidate, onMatched, onDismissed }: FeedCardProps) {
   const [breakdown, setBreakdown] = useState<ScoreBreakdown | null>(null);
   const [loading, setLoading] = useState(false);
   const [expanded, setExpanded] = useState(false);
+  const [actionPending, setActionPending] = useState(false);
+  const [dismissed, setDismissed] = useState(false);
 
   async function handleExpand() {
     if (expanded) {
@@ -17,9 +26,7 @@ export function FeedCard({ candidate }: { candidate: FeedCandidate }) {
 
     setLoading(true);
     try {
-      const res = await fetch(`/api/compatibility/score/${candidate.candidate_id}/breakdown`, {
-        credentials: "include",
-      });
+      const res = await apiFetch(`/compatibility/score/${candidate.candidate_id}/breakdown`);
       if (!res.ok) throw new Error("Failed to load breakdown");
       const data: ScoreBreakdown = await res.json();
       setBreakdown(data);
@@ -29,6 +36,31 @@ export function FeedCard({ candidate }: { candidate: FeedCandidate }) {
       setLoading(false);
     }
   }
+
+  async function handleInteraction(action: "like" | "pass") {
+    setActionPending(true);
+    try {
+      const res = await apiFetch(`/matching/${candidate.candidate_id}/${action}`, {
+        method: "POST",
+      });
+      if (!res.ok) throw new Error(`Failed to ${action}`);
+      const data = await res.json();
+
+      setDismissed(true);
+
+      if (action === "like" && data.matched && data.match_id && data.thread_id) {
+        onMatched?.(data.match_id, data.thread_id);
+      } else {
+        onDismissed?.();
+      }
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setActionPending(false);
+    }
+  }
+
+  if (dismissed) return null;
 
   return (
     <div className="feed-card">
@@ -54,6 +86,21 @@ export function FeedCard({ candidate }: { candidate: FeedCandidate }) {
           )}
         </div>
       )}
+
+      <div className="feed-card-actions">
+        <button
+          disabled={actionPending}
+          onClick={() => handleInteraction("pass")}
+        >
+          Pass
+        </button>
+        <button
+          disabled={actionPending}
+          onClick={() => handleInteraction("like")}
+        >
+          Like
+        </button>
+      </div>
     </div>
   );
 }
