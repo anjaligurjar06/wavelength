@@ -4,7 +4,7 @@ import type { FeedCandidate, ScoreBreakdown } from "@/types/compatibility";
 
 interface FeedCardProps {
   candidate: FeedCandidate;
-  onMatched?: (matchId: string) => void;
+  onMatched?: (matchId: string, threadId: string) => void;
   onDismissed?: () => void;
 }
 
@@ -50,8 +50,8 @@ export function FeedCard({ candidate, onMatched, onDismissed }: FeedCardProps) {
 
       setDismissed(true);
 
-      if (action === "like" && data.matched && data.match_id) {
-        onMatched?.(data.match_id);
+      if (action === "like" && data.matched && data.match_id && data.thread_id) {
+        onMatched?.(data.match_id, data.thread_id);
       } else {
         onDismissed?.();
       }

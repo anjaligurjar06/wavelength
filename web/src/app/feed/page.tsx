@@ -1,12 +1,15 @@
 "use client";
 import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 import { FeedCard } from "@/components/FeedCard";
 import type { FeedCandidate } from "@/types/compatibility";
 
 export default function FeedPage() {
+  const router = useRouter();
   const [candidates, setCandidates] = useState<FeedCandidate[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [matchedThreadId, setMatchedThreadId] = useState<string | null>(null);
 
   useEffect(() => {
     async function loadFeed() {
@@ -25,18 +28,46 @@ export default function FeedPage() {
     loadFeed();
   }, []);
 
+  function handleMatched(candidateId: string, _matchId: string, threadId: string) {
+    setCandidates((prev) => prev.filter((c) => c.candidate_id !== candidateId));
+    setMatchedThreadId(threadId);
+  }
+
+  function handleDismissed(candidateId: string) {
+    setCandidates((prev) => prev.filter((c) => c.candidate_id !== candidateId));
+  }
+
   if (loading) return <main><p>Loading feed…</p></main>;
   if (error) return <main><p>{error}</p></main>;
-  if (candidates.length === 0) return <main><p>No matches nearby yet — check back soon.</p></main>;
 
   return (
     <main>
       <h1>Feed</h1>
-      <div className="feed-list">
-        {candidates.map((c) => (
-          <FeedCard key={c.candidate_id} candidate={c} />
-        ))}
-      </div>
+
+      {matchedThreadId && (
+        <div className="match-banner">
+          <p>It&apos;s a match! 🎉</p>
+          <button onClick={() => router.push(`/chat/${matchedThreadId}`)}>
+            Say hi
+          </button>
+          <button onClick={() => setMatchedThreadId(null)}>Keep browsing</button>
+        </div>
+      )}
+
+      {candidates.length === 0 ? (
+        <p>No matches nearby yet — check back soon.</p>
+      ) : (
+        <div className="feed-list">
+          {candidates.map((c) => (
+            <FeedCard
+              key={c.candidate_id}
+              candidate={c}
+              onMatched={(matchId, threadId) => handleMatched(c.candidate_id, matchId, threadId)}
+              onDismissed={() => handleDismissed(c.candidate_id)}
+            />
+          ))}
+        </div>
+      )}
     </main>
   );
 }
