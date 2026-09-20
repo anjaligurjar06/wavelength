@@ -68,6 +68,27 @@ class CompatibilityScore(Base):
     breakdown: Mapped[dict] = mapped_column(JSON, default=dict)
     computed_at: Mapped[datetime] = mapped_column(server_default=func.now())
 
+class UserInteraction(Base):
+    __tablename__ = "user_interactions"
+    __table_args__ = (
+        UniqueConstraint(
+            "user_id",
+            "target_user_id",
+            name="uq_user_interaction_pair",
+        ),
+    )
+
+    id: Mapped[str] = mapped_column(
+        String(36),
+        primary_key=True,
+        default=_uuid,
+    )
+    user_id: Mapped[str] = mapped_column(ForeignKey("users.id"))
+    target_user_id: Mapped[str] = mapped_column(ForeignKey("users.id"))
+    action: Mapped[str] = mapped_column(String(8))
+    created_at: Mapped[datetime] = mapped_column(
+        server_default=func.now()
+    )
 
 class Match(Base):
     __tablename__ = "matches"

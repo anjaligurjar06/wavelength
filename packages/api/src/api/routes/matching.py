@@ -1,8 +1,10 @@
+from chat.service import create_thread_for_match
 from fastapi import APIRouter, Depends
 from matching.feed import build_ranked_feed
+from matching.state_machine import record_interaction
 from pydantic import BaseModel
 from redis import Redis
-from shared.models import User
+from shared.models import Match, User
 from sqlalchemy.orm import Session
 
 from api.db import get_db
@@ -22,6 +24,12 @@ class UpdateFiltersRequest(BaseModel):
     latitude: float | None = None
     longitude: float | None = None
     max_distance_km: float | None = None
+
+
+class InteractionResponse(BaseModel):
+    action: str
+    matched: bool
+    match_id: str | None
 
 
 @router.get("/filters")
@@ -85,3 +93,52 @@ def get_matching_feed(
         }
         for candidate in ranked_candidates
     ]
+
+
+@router.post("/{candidate_id}/like")
+def like_candidate(
+    candidate_id: str,
+    user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+) -> InteractionResponse:
+    result = record_interaction(
+        db,
+        user.id,
+        candidate_id,
+        "like",
+    )
+
+    db.commit()
+
+    if result.matched and result.match_id is not None:
+        match = db.get(Match, result.match_id)
+        if match is not None:
+            create_thread_for_match(db, match)
+
+    return InteractionResponse(
+        action=result.action,
+        matched=result.matched,
+        match_id=result.match_id,
+    )
+
+
+@router.post("/{candidate_id}/pass")
+def pass_candidate(
+    candidate_id: str,
+    user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+) -> InteractionResponse:
+    result = record_interaction(
+        db,
+        user.id,
+        candidate_id,
+        "pass",
+    )
+
+    db.commit()
+
+    return InteractionResponse(
+        action=result.action,
+        matched=result.matched,
+        match_id=result.match_id,
+    )
