@@ -2,10 +2,18 @@
 import { useState } from "react";
 import type { FeedCandidate, ScoreBreakdown } from "@/types/compatibility";
 
-export function FeedCard({ candidate }: { candidate: FeedCandidate }) {
+interface FeedCardProps {
+  candidate: FeedCandidate;
+  onMatched?: (matchId: string) => void;
+  onDismissed?: () => void;
+}
+
+export function FeedCard({ candidate, onMatched, onDismissed }: FeedCardProps) {
   const [breakdown, setBreakdown] = useState<ScoreBreakdown | null>(null);
   const [loading, setLoading] = useState(false);
   const [expanded, setExpanded] = useState(false);
+  const [actionPending, setActionPending] = useState(false);
+  const [dismissed, setDismissed] = useState(false);
 
   async function handleExpand() {
     if (expanded) {
@@ -29,6 +37,32 @@ export function FeedCard({ candidate }: { candidate: FeedCandidate }) {
       setLoading(false);
     }
   }
+
+  async function handleInteraction(action: "like" | "pass") {
+    setActionPending(true);
+    try {
+      const res = await fetch(`/api/matching/${candidate.candidate_id}/${action}`, {
+        method: "POST",
+        credentials: "include",
+      });
+      if (!res.ok) throw new Error(`Failed to ${action}`);
+      const data = await res.json();
+
+      setDismissed(true);
+
+      if (action === "like" && data.matched && data.match_id) {
+        onMatched?.(data.match_id);
+      } else {
+        onDismissed?.();
+      }
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setActionPending(false);
+    }
+  }
+
+  if (dismissed) return null;
 
   return (
     <div className="feed-card">
@@ -54,6 +88,21 @@ export function FeedCard({ candidate }: { candidate: FeedCandidate }) {
           )}
         </div>
       )}
+
+      <div className="feed-card-actions">
+        <button
+          disabled={actionPending}
+          onClick={() => handleInteraction("pass")}
+        >
+          Pass
+        </button>
+        <button
+          disabled={actionPending}
+          onClick={() => handleInteraction("like")}
+        >
+          Like
+        </button>
+      </div>
     </div>
   );
 }

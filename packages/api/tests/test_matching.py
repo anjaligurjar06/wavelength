@@ -304,3 +304,4 @@ def test_mutual_like_creates_thread_for_chat(db_session):
     )
 
     assert thread is not None
+    assert second_response.json()["thread_id"] == thread.id

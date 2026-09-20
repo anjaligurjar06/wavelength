@@ -30,6 +30,7 @@ class InteractionResponse(BaseModel):
     action: str
     matched: bool
     match_id: str | None
+    thread_id: str | None
 
 
 @router.get("/filters")
@@ -110,15 +111,19 @@ def like_candidate(
 
     db.commit()
 
+    thread_id = None
+
     if result.matched and result.match_id is not None:
         match = db.get(Match, result.match_id)
         if match is not None:
-            create_thread_for_match(db, match)
+            thread = create_thread_for_match(db, match)
+            thread_id = thread.id
 
     return InteractionResponse(
         action=result.action,
         matched=result.matched,
         match_id=result.match_id,
+        thread_id=thread_id,
     )
 
 
@@ -141,4 +146,5 @@ def pass_candidate(
         action=result.action,
         matched=result.matched,
         match_id=result.match_id,
+        thread_id=None,
     )
