@@ -1,9 +1,10 @@
+from chat.service import create_thread_for_match
 from fastapi import APIRouter, Depends
 from matching.feed import build_ranked_feed
 from matching.state_machine import record_interaction
 from pydantic import BaseModel
 from redis import Redis
-from shared.models import User
+from shared.models import Match, User
 from sqlalchemy.orm import Session
 
 from api.db import get_db
@@ -108,6 +109,11 @@ def like_candidate(
     )
 
     db.commit()
+
+    if result.matched and result.match_id is not None:
+        match = db.get(Match, result.match_id)
+        if match is not None:
+            create_thread_for_match(db, match)
 
     return InteractionResponse(
         action=result.action,

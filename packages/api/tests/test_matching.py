@@ -4,7 +4,7 @@ from api.jwt_utils import create_access_token
 from api.main import app
 from api.redis import get_redis
 from fastapi.testclient import TestClient
-from shared.models import CompatibilityScore, User
+from shared.models import CompatibilityScore, Thread, User
 
 client = TestClient(app)
 
@@ -267,3 +267,40 @@ def test_mutual_like_creates_match(db_session):
     assert data["action"] == "like"
     assert data["matched"] is True
     assert data["match_id"] is not None
+
+def test_mutual_like_creates_thread_for_chat(db_session):
+    user_a = User(
+        email="thread-a@example.com",
+        display_name="Thread A",
+    )
+    user_b = User(
+        email="thread-b@example.com",
+        display_name="Thread B",
+    )
+
+    db_session.add_all([user_a, user_b])
+    db_session.commit()
+
+    token_a = create_access_token(user_a.id)
+    token_b = create_access_token(user_b.id)
+
+    client.post(
+        f"/matching/{user_b.id}/like",
+        headers={"Authorization": f"Bearer {token_a}"},
+    )
+
+    second_response = client.post(
+        f"/matching/{user_a.id}/like",
+        headers={"Authorization": f"Bearer {token_b}"},
+    )
+
+    match_id = second_response.json()["match_id"]
+    assert match_id is not None
+
+    thread = (
+        db_session.query(Thread)
+        .filter_by(match_id=match_id)
+        .one_or_none()
+    )
+
+    assert thread is not None
