@@ -60,30 +60,37 @@ def test_returns_existing_thread_without_creating_duplicate():
 def test_concurrent_creation_recovers_from_integrity_error():
     """Simulate two requests racing to create a thread for the same match.
 
-    A second session commits a thread for this match after our SELECT has
-    already run (as if a concurrent request beat us to it). Our own insert
-    then violates the real unique constraint on threads.match_id, and
-    create_thread_for_match should recover by reloading and returning the
-    winning thread instead of propagating the error.
+    Our own existence check genuinely finds nothing. Then, right as we
+    attempt to commit our new thread, a second, independent session
+    commits a conflicting thread first. Our commit then hits the real
+    unique constraint, and create_thread_for_match should recover by
+    reloading and returning the winning thread instead of propagating
+    the error.
     """
-    db = make_session()
+    engine = create_engine(
+        "sqlite://",
+        connect_args={"check_same_thread": False},
+        poolclass=StaticPool,
+    )
+    Base.metadata.create_all(engine)
+
+    db = Session(engine)
     match = make_match(db)
 
-    # Simulate our SELECT finding nothing, by directly inserting a
-    # conflicting row through a second, independent session bound to the
-    # same in-memory database connection, after create_thread_for_match's
-    # own existence check would have run.
-    original_query = Session.query
+    original_commit = Session.commit
+    call_count = {"n": 0}
 
-    def query_then_insert_conflict(self, *args, **kwargs):
-        result = original_query(self, *args, **kwargs)
-        if args and args[0] is Thread:
-            winning_thread = Thread(match_id=match.id)
-            db.add(winning_thread)
-            db.commit()
-        return result
+    def commit_with_race(self):
+        call_count["n"] += 1
+        if call_count["n"] == 1:
+            # A concurrent request wins the race right before our commit.
+            other_session = Session(engine)
+            other_session.add(Thread(match_id=match.id))
+            other_session.commit()
+            other_session.close()
+        return original_commit(self)
 
-    with patch.object(Session, "query", query_then_insert_conflict):
+    with patch.object(Session, "commit", commit_with_race):
         result = create_thread_for_match(db, match)
 
     all_threads = db.scalars(select(Thread).where(Thread.match_id == match.id)).all()
