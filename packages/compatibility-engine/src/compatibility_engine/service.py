@@ -1,7 +1,7 @@
-from compatibility_engine.explanations import render_score_breakdown
 from shared.models import CompatibilityScore, UserMusicProfile
 from sqlalchemy.orm import Session
 
+from compatibility_engine.explanations import render_score_breakdown
 from compatibility_engine.features import build_genre_vector
 from compatibility_engine.scoring import (
     ScoreBreakdown,

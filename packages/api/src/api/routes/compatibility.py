@@ -1,6 +1,6 @@
 from compatibility_engine.service import (
-    get_score_breakdown_explanation,
     get_score_breakdown,
+    get_score_breakdown_explanation,
     get_stored_compatibility_score,
     recompute_compatibility_score,
 )
