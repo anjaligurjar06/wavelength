@@ -1,4 +1,5 @@
 "use client";
+import { apiFetch } from "@/lib/api";
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { FeedCard } from "@/components/FeedCard";
@@ -14,7 +15,7 @@ export default function FeedPage() {
   useEffect(() => {
     async function loadFeed() {
       try {
-        const res = await fetch("/api/matching/feed", { credentials: "include" });
+        const res = await apiFetch("/matching/feed");
         if (!res.ok) throw new Error(`Feed request failed: ${res.status}`);
         const data: FeedCandidate[] = await res.json();
         setCandidates(data);

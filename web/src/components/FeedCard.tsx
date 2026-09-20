@@ -1,4 +1,5 @@
 "use client";
+import { apiFetch } from "@/lib/api";
 import { useState } from "react";
 import type { FeedCandidate, ScoreBreakdown } from "@/types/compatibility";
 
@@ -25,9 +26,7 @@ export function FeedCard({ candidate, onMatched, onDismissed }: FeedCardProps) {
 
     setLoading(true);
     try {
-      const res = await fetch(`/api/compatibility/score/${candidate.candidate_id}/breakdown`, {
-        credentials: "include",
-      });
+      const res = await apiFetch(`/compatibility/score/${candidate.candidate_id}/breakdown`);
       if (!res.ok) throw new Error("Failed to load breakdown");
       const data: ScoreBreakdown = await res.json();
       setBreakdown(data);
@@ -41,9 +40,8 @@ export function FeedCard({ candidate, onMatched, onDismissed }: FeedCardProps) {
   async function handleInteraction(action: "like" | "pass") {
     setActionPending(true);
     try {
-      const res = await fetch(`/api/matching/${candidate.candidate_id}/${action}`, {
+      const res = await apiFetch(`/matching/${candidate.candidate_id}/${action}`, {
         method: "POST",
-        credentials: "include",
       });
       if (!res.ok) throw new Error(`Failed to ${action}`);
       const data = await res.json();
