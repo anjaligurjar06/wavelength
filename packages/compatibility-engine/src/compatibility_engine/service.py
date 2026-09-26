@@ -1,6 +1,7 @@
 from shared.models import CompatibilityScore, UserMusicProfile
 from sqlalchemy.orm import Session
 
+from compatibility_engine.explanations import render_score_breakdown
 from compatibility_engine.features import build_genre_vector
 from compatibility_engine.scoring import (
     ScoreBreakdown,
@@ -171,6 +172,83 @@ def get_stored_compatibility_score(
         raise ValueError("Compatibility score not found")
 
     return score_record
+
+def get_shared_artist_names(
+    db: Session,
+    user_a_id: str,
+    user_b_id: str,
+    shared_artist_ids: list[str],
+) -> list[str]:
+    """Return readable artist names for shared Spotify artist IDs."""
+
+    if not shared_artist_ids:
+        return []
+
+    profile_a = (
+        db.query(UserMusicProfile)
+        .filter_by(user_id=user_a_id)
+        .one_or_none()
+    )
+
+    profile_b = (
+        db.query(UserMusicProfile)
+        .filter_by(user_id=user_b_id)
+        .one_or_none()
+    )
+
+    if profile_a is None or profile_b is None:
+        return []
+
+    artists_a = profile_a.top_artists.get("items", [])
+    artists_b = profile_b.top_artists.get("items", [])
+
+    artist_names = {}
+
+    for artist in artists_a + artists_b:
+        artist_id = artist.get("id")
+        artist_name = artist.get("name")
+
+        if artist_id and artist_name:
+            artist_names[artist_id] = artist_name
+
+    return [
+        artist_names[artist_id]
+        for artist_id in shared_artist_ids
+        if artist_id in artist_names
+    ]
+
+def get_score_breakdown_explanation(
+    db: Session,
+    user_a_id: str,
+    user_b_id: str,
+) -> dict:
+    """Return a frontend-readable explanation of the compatibility breakdown."""
+
+    breakdown = get_score_breakdown(
+        db,
+        user_a_id,
+        user_b_id,
+    )
+
+    shared_artist_ids = breakdown.get("shared_artists", [])
+
+    artist_names = get_shared_artist_names(
+        db,
+        user_a_id,
+        user_b_id,
+        shared_artist_ids,
+    )
+
+    explanation = render_score_breakdown(
+        breakdown,
+        artist_names=artist_names,
+    )
+
+    return {
+        **explanation,
+        "artist_overlap": breakdown.get("artist_overlap", 0.0),
+        "genre_similarity": breakdown.get("genre_similarity", 0.0),
+    }
 
 
 def get_score_breakdown(
