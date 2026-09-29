@@ -50,8 +50,4 @@ def set_cached_score(
         user_b_id,
     )
 
-    redis_client.setex(
-        key,
-        ttl_seconds,
-        score,
-    )
+    redis_client.set(key, score, ex=ttl_seconds)

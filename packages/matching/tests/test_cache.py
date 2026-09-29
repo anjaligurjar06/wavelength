@@ -60,8 +60,8 @@ def test_set_cached_score():
         92.5,
     )
 
-    redis_client.setex.assert_called_once_with(
+    redis_client.set.assert_called_once_with(
         "compatibility:user_a:user_b",
-        3600,
         92.5,
+        ex=3600,
     )
