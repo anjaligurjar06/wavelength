@@ -2,11 +2,18 @@ from shared.models import CompatibilityScore, UserMusicProfile
 from sqlalchemy.orm import Session
 
 from compatibility_engine.explanations import render_score_breakdown
-from compatibility_engine.features import build_genre_vector
+from compatibility_engine.features import (
+    build_genre_vector,
+    build_manual_genre_vector,
+)
 from compatibility_engine.scoring import (
     ScoreBreakdown,
     adaptive_composite_score,
+    apply_score_floor,
+    artist_key,
     genre_coverage,
+    is_manual_profile,
+    is_sparse_profile,
 )
 from compatibility_engine.similarity import cosine_similarity, jaccard_similarity
 
@@ -35,28 +42,22 @@ def get_compatibility_score(
     artists_a = profile_a.top_artists.get("items", [])
     artists_b = profile_b.top_artists.get("items", [])
 
+    # D20: if either user typed their music in, compare artists by name.
+    use_names = is_manual_profile(profile_a.time_window) or is_manual_profile(
+        profile_b.time_window
+    )
+
     artist_ids_a = [
-        artist["id"]
-        for artist in artists_a
-        if artist.get("id")
+        key for artist in artists_a
+        if (key := artist_key(artist, use_names))
     ]
     artist_ids_b = [
-        artist["id"]
-        for artist in artists_b
-        if artist.get("id")
+        key for artist in artists_b
+        if (key := artist_key(artist, use_names))
     ]
 
-    ranked_genres_a = [
-        artist.get("genres", [])
-        for artist in artists_a
-    ]
-    ranked_genres_b = [
-        artist.get("genres", [])
-        for artist in artists_b
-    ]
-
-    genre_vector_a = build_genre_vector(ranked_genres_a)
-    genre_vector_b = build_genre_vector(ranked_genres_b)
+    genre_vector_a, coverage_a = _genre_data(profile_a, artists_a)
+    genre_vector_b, coverage_b = _genre_data(profile_b, artists_b)
 
     artist_overlap = jaccard_similarity(
         artist_ids_a,
@@ -67,9 +68,6 @@ def get_compatibility_score(
         genre_vector_a,
         genre_vector_b,
     )
-
-    coverage_a = genre_coverage(artists_a)
-    coverage_b = genre_coverage(artists_b)
 
     score = adaptive_composite_score(
         artist_overlap,
@@ -86,13 +84,46 @@ def get_compatibility_score(
         set(genre_vector_a) & set(genre_vector_b)
     )
 
+    # D21: pairs with nothing in common get a small minimum score.
+    has_overlap = bool(shared_artists or shared_genres)
+    score = apply_score_floor(score, has_overlap)
+
+    # D19: tell the app when either user has very little data.
+    low_confidence = is_sparse_profile(artists_a) or is_sparse_profile(
+        artists_b
+    )
+
     return ScoreBreakdown(
         score=score,
         artist_overlap=artist_overlap,
         genre_similarity=genre_similarity,
         shared_artists=shared_artists,
         shared_genres=shared_genres,
+        low_confidence=low_confidence,
     )
+
+
+def _genre_data(
+    profile: UserMusicProfile,
+    artists: list[dict],
+) -> tuple[dict[str, float], float]:
+    """Return (genre_vector, coverage) for one user.
+
+    Spotify users: genres come from their artists.
+    Manual users: genres come from the list they typed in.
+    """
+
+    typed_genres = (profile.top_genres or {}).get("genres", [])
+
+    if is_manual_profile(profile.time_window) and typed_genres:
+        return build_manual_genre_vector(typed_genres), 1.0
+
+    ranked_genres = [
+        artist.get("genres", [])
+        for artist in artists
+    ]
+
+    return build_genre_vector(ranked_genres), genre_coverage(artists)
 
 
 def recompute_compatibility_score(
@@ -126,6 +157,7 @@ def recompute_compatibility_score(
         "genre_similarity": result.genre_similarity,
         "shared_artists": result.shared_artists,
         "shared_genres": result.shared_genres,
+        "low_confidence": result.low_confidence,
     }
 
     score_100 = round(result.score * 100, 2)
@@ -173,6 +205,7 @@ def get_stored_compatibility_score(
 
     return score_record
 
+
 def get_shared_artist_names(
     db: Session,
     user_a_id: str,
@@ -211,11 +244,15 @@ def get_shared_artist_names(
         if artist_id and artist_name:
             artist_names[artist_id] = artist_name
 
+        if artist_name:
+            artist_names[artist_name.strip().lower()] = artist_name
+
     return [
         artist_names[artist_id]
         for artist_id in shared_artist_ids
         if artist_id in artist_names
     ]
+
 
 def get_score_breakdown_explanation(
     db: Session,
@@ -248,6 +285,7 @@ def get_score_breakdown_explanation(
         **explanation,
         "artist_overlap": breakdown.get("artist_overlap", 0.0),
         "genre_similarity": breakdown.get("genre_similarity", 0.0),
+        "low_confidence": breakdown.get("low_confidence", False),
     }
 
 
