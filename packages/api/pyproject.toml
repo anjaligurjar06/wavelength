@@ -15,6 +15,7 @@ dependencies = [
     "compatibility-engine",
     "chat",
     "redis>=5.0",
+    "trust-safety",
 ]
 
 [build-system]
@@ -30,3 +31,4 @@ music-ingestion = { workspace = true }
 matching = { workspace = true }
 compatibility-engine = { workspace = true }
 chat = { workspace = true }
+trust-safety = { workspace = true }

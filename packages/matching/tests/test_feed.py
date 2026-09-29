@@ -136,9 +136,9 @@ def test_build_ranked_feed_sorts_descending():
     ):
         return scores[candidate_id]
 
-    with patch(
-        "matching.feed.get_candidate_score",
-        side_effect=fake_score,
+    with (
+        patch("matching.feed.get_candidate_score", side_effect=fake_score),
+        patch("matching.feed.is_blocked", return_value=False),
     ):
         feed = build_ranked_feed(
             db,
@@ -175,15 +175,15 @@ def test_build_ranked_feed_excludes_out_of_range_candidate():
         longitude=77.20,
     )
 
-    feed = build_ranked_feed(
-        db,
-        redis_client,
-        current_user,
-        [candidate],
-    )
+    with patch("matching.feed.is_blocked", return_value=False):
+        feed = build_ranked_feed(
+            db,
+            redis_client,
+            current_user,
+            [candidate],
+        )
 
     assert feed == []
-
 
 def test_build_ranked_feed_empty_candidates():
     db = MagicMock()

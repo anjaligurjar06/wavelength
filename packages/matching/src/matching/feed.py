@@ -7,6 +7,7 @@ from compatibility_engine.service import (
 from redis import Redis
 from shared.models import User
 from sqlalchemy.orm import Session
+from trust_safety.service import is_blocked
 
 from matching.cache import get_cached_score, set_cached_score
 from matching.distance import is_within_distance
@@ -15,7 +16,7 @@ from matching.distance import is_within_distance
 @dataclass(frozen=True)
 class RankedCandidate:
     user_id: str
-    display_name: str   
+    display_name: str
     score: float
 
 
@@ -73,6 +74,9 @@ def build_ranked_feed(
         if candidate.id == current_user.id:
             continue
 
+        if is_blocked(db, current_user.id, candidate.id):
+            continue
+
         if not is_within_distance(
             current_user.latitude,
             current_user.longitude,
@@ -82,12 +86,15 @@ def build_ranked_feed(
         ):
             continue
 
-        score = get_candidate_score(
-            db,
-            redis_client,
-            current_user.id,
-            candidate.id,
-        )
+        try:
+            score = get_candidate_score(
+                db,
+                redis_client,
+                current_user.id,
+                candidate.id,
+            )
+        except ValueError:
+            continue
 
         ranked_candidates.append(
             RankedCandidate(

@@ -90,6 +90,31 @@ class UserInteraction(Base):
         server_default=func.now()
     )
 
+class Report(Base):
+    __tablename__ = "reports"
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=_uuid)
+    reporter_id: Mapped[str] = mapped_column(ForeignKey("users.id"))
+    reported_user_id: Mapped[str] = mapped_column(ForeignKey("users.id"))
+    reason: Mapped[str] = mapped_column(String(64))
+    details: Mapped[str | None] = mapped_column(String(1000), default=None)
+    created_at: Mapped[datetime] = mapped_column(server_default=func.now())
+
+class Block(Base):
+    __tablename__ = "blocks"
+    __table_args__ = (
+        UniqueConstraint(
+            "blocker_id",
+            "blocked_user_id",
+            name="uq_block_pair",
+        ),
+    )
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=_uuid)
+    blocker_id: Mapped[str] = mapped_column(ForeignKey("users.id"))
+    blocked_user_id: Mapped[str] = mapped_column(ForeignKey("users.id"))
+    created_at: Mapped[datetime] = mapped_column(server_default=func.now())
+
 class Match(Base):
     __tablename__ = "matches"
     __table_args__ = (UniqueConstraint("user_a_id", "user_b_id", name="uq_match_pair"),)

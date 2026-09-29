@@ -77,6 +77,7 @@ dependencies = [
     { name = "pyjwt" },
     { name = "redis" },
     { name = "shared" },
+    { name = "trust-safety" },
     { name = "uvicorn", extra = ["standard"] },
 ]
 
@@ -92,6 +93,7 @@ requires-dist = [
     { name = "pyjwt", specifier = ">=2.9" },
     { name = "redis", specifier = ">=5.0" },
     { name = "shared", editable = "packages/shared" },
+    { name = "trust-safety", editable = "packages/trust-safety" },
     { name = "uvicorn", extras = ["standard"], specifier = ">=0.32" },
 ]
 
@@ -330,6 +332,7 @@ dependencies = [
     { name = "redis" },
     { name = "shared" },
     { name = "sqlalchemy" },
+    { name = "trust-safety" },
 ]
 
 [package.metadata]
@@ -338,6 +341,7 @@ requires-dist = [
     { name = "redis", specifier = ">=5.0" },
     { name = "shared", editable = "packages/shared" },
     { name = "sqlalchemy", specifier = ">=2.0" },
+    { name = "trust-safety", editable = "packages/trust-safety" },
 ]
 
 [[package]]
@@ -642,6 +646,16 @@ wheels = [
 name = "trust-safety"
 version = "0.1.0"
 source = { editable = "packages/trust-safety" }
+dependencies = [
+    { name = "shared" },
+    { name = "sqlalchemy" },
+]
+
+[package.metadata]
+requires-dist = [
+    { name = "shared", editable = "packages/shared" },
+    { name = "sqlalchemy", specifier = ">=2.0" },
+]
 
 [[package]]
 name = "typing-extensions"
