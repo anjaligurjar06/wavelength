@@ -1,12 +1,15 @@
 from datetime import UTC, datetime
 
+from chat.rate_limit import check_rate_limit
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
+from redis import Redis
 from shared.models import Match, Message, Thread, User
 from sqlalchemy.orm import Session
 
 from api.db import get_db
 from api.deps import get_current_user
+from api.redis import get_redis
 
 router = APIRouter(prefix="/chat", tags=["chat"])
 
@@ -115,12 +118,19 @@ def send_message(
     payload: SendMessageRequest,
     user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
+    redis_client: Redis = Depends(get_redis),
 ) -> MessageResponse:
     thread = _get_thread_or_404(db, thread_id)
     _assert_participant(thread, user)
 
     if not payload.content.strip():
         raise HTTPException(status_code=400, detail="Message cannot be empty")
+
+    if not check_rate_limit(redis_client, user.id):
+        raise HTTPException(
+            status_code=429,
+            detail="You're sending messages too quickly. Please slow down.",
+        )
 
     message = Message(
         thread_id=thread_id,
