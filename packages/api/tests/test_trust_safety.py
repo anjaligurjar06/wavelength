@@ -1,5 +1,8 @@
+from unittest.mock import MagicMock
+
 from api.jwt_utils import create_access_token
 from api.main import app
+from api.redis import get_redis
 from fastapi.testclient import TestClient
 from shared.models import User
 
@@ -125,26 +128,33 @@ def test_block_user_blocked_disappears_from_feed(db_session):
 
     token = create_access_token(blocker.id)
 
-    # Sanity check: before blocking, the candidate genuinely appears in the feed.
-    feed_before = client.get(
-        "/matching/feed",
-        headers={"Authorization": f"Bearer {token}"},
-    )
-    assert feed_before.status_code == 200
-    ids_before = [c["candidate_id"] for c in feed_before.json()]
-    assert candidate.id in ids_before
+    fake_redis = MagicMock()
+    fake_redis.get.return_value = None
+    app.dependency_overrides[get_redis] = lambda: fake_redis
 
-    block_response = client.post(
-        "/trust-safety/block",
-        json={"blocked_user_id": candidate.id},
-        headers={"Authorization": f"Bearer {token}"},
-    )
-    assert block_response.status_code == 200
+    try:
+        # Sanity check: before blocking, the candidate genuinely appears in the feed.
+        feed_before = client.get(
+            "/matching/feed",
+            headers={"Authorization": f"Bearer {token}"},
+        )
+        assert feed_before.status_code == 200
+        ids_before = [c["candidate_id"] for c in feed_before.json()]
+        assert candidate.id in ids_before
 
-    feed_after = client.get(
-        "/matching/feed",
-        headers={"Authorization": f"Bearer {token}"},
-    )
-    assert feed_after.status_code == 200
-    ids_after = [c["candidate_id"] for c in feed_after.json()]
-    assert candidate.id not in ids_after
+        block_response = client.post(
+            "/trust-safety/block",
+            json={"blocked_user_id": candidate.id},
+            headers={"Authorization": f"Bearer {token}"},
+        )
+        assert block_response.status_code == 200
+
+        feed_after = client.get(
+            "/matching/feed",
+            headers={"Authorization": f"Bearer {token}"},
+        )
+        assert feed_after.status_code == 200
+        ids_after = [c["candidate_id"] for c in feed_after.json()]
+        assert candidate.id not in ids_after
+    finally:
+        app.dependency_overrides.pop(get_redis, None)
