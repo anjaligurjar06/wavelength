@@ -133,17 +133,6 @@ def needs_manual_genre_fallback(
     )
 
     return pair_coverage < threshold
-def artist_key(artist: dict, use_names: bool = False) -> str | None:
-    
-    if use_names or not artist.get("id"):
-        name = str(artist.get("name") or "").strip().lower()
-        return name or None
-    return artist["id"]
-
-
-def is_manual_profile(time_window: str | None) -> bool:
-    return time_window == "manual"
-
 
 
 def is_sparse_profile(
