@@ -2,6 +2,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from api.config import settings
+from api.errors import register_exception_handlers
 from api.routes import chat
 from api.routes.auth import router as auth_router
 from api.routes.compatibility import router as compatibility_router
@@ -19,7 +20,8 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
-
+app = FastAPI(title="Wavelength API", version="0.1.0")
+register_exception_handlers(app)
 app.include_router(auth_router)
 app.include_router(users_router)
 app.include_router(music_router)
