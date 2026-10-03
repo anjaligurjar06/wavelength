@@ -8,6 +8,8 @@ GENRE_WEIGHT = 0.40
 # Provisional threshold.
 # This can be tuned later using real Spotify/user data.
 DEFAULT_MANUAL_FALLBACK_THRESHOLD = 0.30
+MIN_ARTISTS_FOR_RELIABLE_SCORE = 5
+NO_OVERLAP_FLOOR = 0.05
 
 
 @dataclass(frozen=True)
@@ -17,6 +19,7 @@ class ScoreBreakdown:
     genre_similarity: float
     shared_artists: list[str]
     shared_genres: list[str]
+    low_confidence: bool = False   
 
 
 def composite_score(
@@ -130,3 +133,49 @@ def needs_manual_genre_fallback(
     )
 
     return pair_coverage < threshold
+
+
+def is_sparse_profile(
+    artists: list[dict],
+    min_artists: int = MIN_ARTISTS_FOR_RELIABLE_SCORE,
+) -> bool:
+    """Return True when a user has too few artists for a reliable score."""
+
+    return len(artists) < min_artists
+
+
+def artist_key(artist: dict, use_names: bool = False) -> str | None:
+    """Return the value used to compare artists between two users.
+
+    Spotify artists have an id. Manual artists have id=None, so we
+    compare by lowercase name instead.
+    """
+
+    if use_names or not artist.get("id"):
+        name = str(artist.get("name") or "").strip().lower()
+        return name or None
+
+    return artist["id"]
+
+
+def is_manual_profile(time_window: str | None) -> bool:
+    """Return True when the profile was typed in by the user."""
+
+    return time_window == "manual"
+
+
+def apply_score_floor(
+    score: float,
+    has_overlap: bool,
+    floor: float = NO_OVERLAP_FLOOR,
+) -> float:
+    """Give pairs with nothing in common a small minimum score.
+
+    A real score is never raised. The floor only replaces a score of
+    zero when the pair shares no artists and no genres.
+    """
+
+    if has_overlap:
+        return score
+
+    return max(score, floor)

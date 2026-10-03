@@ -22,6 +22,8 @@ def build_genre_vector_from_artists(
     ]
 
     return build_genre_vector(ranked_genres)
+
+
 def build_genre_vector(
     ranked_genres: list[list[str]],
 ) -> dict[str, float]:
@@ -53,3 +55,23 @@ def build_genre_vector(
         genre: weight / total_weight
         for genre, weight in genre_weights.items()
     }
+
+
+def build_manual_genre_vector(genres: list[str]) -> dict[str, float]:
+    """Build a genre vector from genres the user typed in.
+
+    The user did not rank them, so every genre gets the same weight.
+    """
+
+    cleaned = {
+        genre.strip().lower()
+        for genre in genres
+        if genre and genre.strip()
+    }
+
+    if not cleaned:
+        return {}
+
+    weight = 1.0 / len(cleaned)
+
+    return {genre: weight for genre in cleaned}

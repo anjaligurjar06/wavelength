@@ -111,3 +111,18 @@ def test_higher_rank_has_more_weight():
 
 def test_empty_input():
     assert build_genre_vector([]) == {}
+
+
+def test_manual_genre_vector_gives_equal_weights():
+    from compatibility_engine.features import build_manual_genre_vector
+
+    vector = build_manual_genre_vector(["Pop", "rock"])
+
+    assert vector == {"pop": 0.5, "rock": 0.5}
+
+
+def test_manual_genre_vector_empty_input():
+    from compatibility_engine.features import build_manual_genre_vector
+
+    assert build_manual_genre_vector([]) == {}
+    assert build_manual_genre_vector(["  ", ""]) == {}

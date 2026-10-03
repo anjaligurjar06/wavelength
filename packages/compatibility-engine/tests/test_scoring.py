@@ -234,3 +234,51 @@ def test_missing_genres_shift_weight_to_artists():
 
     assert artist_weight == pytest.approx(0.90)
     assert genre_weight == pytest.approx(0.10)
+
+
+from compatibility_engine.scoring import (  # noqa: E402
+    NO_OVERLAP_FLOOR,
+    apply_score_floor,
+    artist_key,
+    is_sparse_profile,
+)
+
+
+def test_profile_with_two_artists_is_sparse():
+    assert is_sparse_profile([{"id": "a"}, {"id": "b"}]) is True
+
+
+def test_profile_with_zero_artists_is_sparse():
+    assert is_sparse_profile([]) is True
+
+
+def test_profile_with_enough_artists_is_not_sparse():
+    artists = [{"id": str(i)} for i in range(5)]
+    assert is_sparse_profile(artists) is False
+
+def test_artist_key_uses_id_for_spotify_artist():
+    assert artist_key({"id": "abc", "name": "Drake"}) == "abc"
+
+
+def test_artist_key_uses_lowercase_name_when_no_id():
+    assert artist_key({"id": None, "name": "  Drake "}) == "drake"
+
+
+def test_artist_key_can_force_names():
+    assert artist_key({"id": "abc", "name": "Drake"}, use_names=True) == "drake"
+
+
+def test_artist_key_returns_none_for_empty_name():
+    assert artist_key({"id": None, "name": "  "}) is None
+
+
+def test_floor_applied_when_no_overlap():
+    assert apply_score_floor(0.0, has_overlap=False) == NO_OVERLAP_FLOOR
+
+
+def test_floor_never_lifts_a_real_score():
+    assert apply_score_floor(0.4, has_overlap=True) == 0.4
+
+
+def test_floor_does_not_lower_a_higher_score():
+    assert apply_score_floor(0.5, has_overlap=False) == 0.5
