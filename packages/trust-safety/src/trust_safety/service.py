@@ -80,3 +80,17 @@ def is_blocked(
         .first()
     )
     return block is not None
+
+def get_blocked_user_ids(db: Session, user_id: str) -> set[str]:
+    """Return ids of every user blocked by, or blocking, this user (one query)."""
+    rows = (
+        db.query(Block.blocker_id, Block.blocked_user_id)
+        .filter(
+            (Block.blocker_id == user_id) | (Block.blocked_user_id == user_id)
+        )
+        .all()
+    )
+    return {
+        blocked_id if blocker_id == user_id else blocker_id
+        for blocker_id, blocked_id in rows
+    }

@@ -128,17 +128,17 @@ def test_build_ranked_feed_sorts_descending():
         "candidate_c": 82.0,
     }
 
-    def fake_score(
+    def fake_scores(
         db,
         redis_client,
         current_user_id,
-        candidate_id,
+        candidate_ids,
     ):
-        return scores[candidate_id]
+        return {cid: scores[cid] for cid in candidate_ids}
 
     with (
-        patch("matching.feed.get_candidate_score", side_effect=fake_score),
-        patch("matching.feed.is_blocked", return_value=False),
+        patch("matching.feed.get_candidate_scores", side_effect=fake_scores),
+        patch("matching.feed.get_blocked_user_ids", return_value=set()),
     ):
         feed = build_ranked_feed(
             db,
@@ -175,7 +175,7 @@ def test_build_ranked_feed_excludes_out_of_range_candidate():
         longitude=77.20,
     )
 
-    with patch("matching.feed.is_blocked", return_value=False):
+    with patch("matching.feed.get_blocked_user_ids", return_value=set()):
         feed = build_ranked_feed(
             db,
             redis_client,
