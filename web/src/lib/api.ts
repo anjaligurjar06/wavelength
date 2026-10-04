@@ -13,9 +13,15 @@ export async function apiFetch(path: string, options: RequestInit = {}): Promise
     headers.set("Authorization", `Bearer ${token}`);
   }
 
-  return fetch(`${API_URL}${path}`, {
+  const res = await fetch(`${API_URL}${path}`, {
     ...options,
     headers,
   });
-}
 
+  if (res.status === 401 && typeof window !== "undefined") {
+    localStorage.removeItem("wavelength_token");
+    window.location.href = "/login";
+  }
+
+  return res;
+}
