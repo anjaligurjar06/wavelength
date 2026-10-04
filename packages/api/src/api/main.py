@@ -16,7 +16,11 @@ from api.routes.music import router as music_router
 from api.routes.trust_safety import router as trust_safety_router
 from api.routes.users import router as users_router
 
+configure_logging()
+access_logger = logging.getLogger("wavelength.access")
+
 app = FastAPI(title="Wavelength API", version="0.1.0")
+register_exception_handlers(app)
 
 app.add_middleware(
     CORSMiddleware,
@@ -25,10 +29,6 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
-app = FastAPI(title="Wavelength API", version="0.1.0")
-register_exception_handlers(app)
-configure_logging()
-access_logger = logging.getLogger("wavelength.access")
 
 
 @app.middleware("http")
@@ -53,6 +53,8 @@ async def log_requests(request: Request, call_next):
     )
     response.headers["X-Request-ID"] = request_id
     return response
+
+
 app.include_router(auth_router)
 app.include_router(users_router)
 app.include_router(music_router)
@@ -60,6 +62,7 @@ app.include_router(matching_router)
 app.include_router(compatibility_router)
 app.include_router(chat.router)
 app.include_router(trust_safety_router)
+
 
 @app.get("/health")
 def health() -> dict[str, str]:

@@ -64,3 +64,18 @@ def test_unhandled_exception_returns_500_without_leaking_details():
     assert response.headers["content-type"].startswith("application/problem+json")
     assert "secret internal detail" not in response.text
     assert response.json()["detail"] == "Internal server error"
+
+def test_cors_preflight_is_handled_by_middleware():
+    from api.config import settings
+
+    response = client.options(
+        "/matching/feed",
+        headers={
+            "Origin": settings.frontend_url,
+            "Access-Control-Request-Method": "GET",
+            "Access-Control-Request-Headers": "authorization",
+        },
+    )
+
+    assert response.status_code == 200
+    assert response.headers["access-control-allow-origin"] == settings.frontend_url
