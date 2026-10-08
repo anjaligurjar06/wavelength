@@ -1,5 +1,6 @@
 from unittest.mock import Mock, patch
 
+from api.config import settings
 from api.main import app
 from fastapi.testclient import TestClient
 
@@ -34,5 +35,5 @@ def test_callback_redirects_to_frontend_with_token(db_session) -> None:
 
     assert response.status_code == 307
     location = response.headers["location"]
-    assert location.startswith("http://localhost:3000/auth/callback?token=")
+    assert location.startswith(f"{settings.frontend_url}/auth/callback?token=")
     assert "user_id=" in location
