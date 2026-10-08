@@ -10,5 +10,6 @@ class Settings(BaseSettings):
     jwt_secret: str
     database_url: str
     frontend_url: str = "http://localhost:3000"
+    redis_url: str = "redis://localhost:6379/0"
 
 settings = Settings()

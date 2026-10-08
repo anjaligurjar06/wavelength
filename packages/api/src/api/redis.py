@@ -1,11 +1,12 @@
+from functools import lru_cache
+
 from redis import Redis
 
+from api.config import settings
 
+
+@lru_cache(maxsize=1)
 def get_redis() -> Redis:
-    """Return the Redis client used by the API."""
+    """Return the shared Redis client used by the API."""
 
-    return Redis(
-        host="localhost",
-        port=6379,
-        decode_responses=True,
-    )
+    return Redis.from_url(settings.redis_url, decode_responses=True)
