@@ -1,9 +1,10 @@
+import hmac
 import logging
 import secrets
 from urllib.parse import urlencode
 
 import httpx
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Request
 from fastapi.responses import RedirectResponse
 from shared.models import User
 from sqlalchemy import select
@@ -23,8 +24,8 @@ SCOPES = "user-read-email user-top-read user-read-recently-played"
 
 
 @router.get("/authorize")
-def authorize() -> RedirectResponse:
-    state = secrets.token_urlsafe(16)
+def authorize(request: Request) -> RedirectResponse:
+    state = secrets.token_urlsafe(32)
     params = {
         "client_id": settings.spotify_client_id,
         "response_type": "code",
@@ -33,11 +34,26 @@ def authorize() -> RedirectResponse:
         "state": state,
     }
     url = f"{SPOTIFY_AUTHORIZE_URL}?{urlencode(params)}"
-    return RedirectResponse(url)
+    response = RedirectResponse(url)
+    response.set_cookie(
+        "spotify_oauth_state",
+        state,
+        max_age=600,
+        httponly=True,
+        secure=settings.spotify_redirect_uri.startswith("https://"),
+        samesite="lax",
+        path="/auth/spotify",
+    )
+    return response
 
 
 @router.get("/callback")
-def callback(code: str, db: Session = Depends(get_db)) -> RedirectResponse:
+def callback(
+    code: str, state: str, request: Request, db: Session = Depends(get_db)
+) -> RedirectResponse:
+    saved_state = request.cookies.get("spotify_oauth_state")
+    if not saved_state or not hmac.compare_digest(saved_state, state):
+        raise HTTPException(status_code=400, detail="Invalid OAuth state")
     try:
         token_response = httpx.post(
             SPOTIFY_TOKEN_URL,
@@ -108,5 +124,14 @@ def callback(code: str, db: Session = Depends(get_db)) -> RedirectResponse:
     db.refresh(user)
 
     jwt_token = create_access_token(user.id)
-    redirect_url = f"{settings.frontend_url}/auth/callback?token={jwt_token}&user_id={user.id}"
-    return RedirectResponse(redirect_url)
+    response = RedirectResponse(f"{settings.frontend_url}/auth/callback")
+    response.set_cookie(
+        "wavelength_session",
+        jwt_token,
+        httponly=True,
+        secure=settings.spotify_redirect_uri.startswith("https://"),
+        samesite="lax",
+        path="/",
+    )
+    response.delete_cookie("spotify_oauth_state", path="/auth/spotify")
+    return response
