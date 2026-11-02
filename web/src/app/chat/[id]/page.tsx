@@ -29,7 +29,7 @@ export default function ChatPage() {
       setError(null);
     } catch (err) {
       console.error(err);
-      setError("Couldn't load messages. Retrying…");
+      setError("Couldn't load messages. RetryingÃ¢â‚¬Â¦");
     } finally {
       setLoading(false);
     }
@@ -45,9 +45,12 @@ export default function ChatPage() {
       }
     }
     loadMe();
-    loadMessages();
-    const timer = setInterval(loadMessages, POLL_MS);
-    return () => clearInterval(timer);
+    const initialLoad = setTimeout(() => void loadMessages(), 0);
+    const timer = setInterval(() => void loadMessages(), POLL_MS);
+    return () => {
+      clearTimeout(initialLoad);
+      clearInterval(timer);
+    };
   }, [loadMessages]);
 
   async function handleSend() {
@@ -77,11 +80,11 @@ export default function ChatPage() {
     }
   }
 
-  if (loading) return <main><p>Loading chat…</p></main>;
+  if (loading) return <main><p>Loading chatÃ¢â‚¬Â¦</p></main>;
 
   return (
     <main>
-      <p><Link href="/matches">← Matches</Link></p>
+      <p><Link href="/matches">Ã¢â€ Â Matches</Link></p>
       <h1>Chat</h1>
       {error && <p>{error}</p>}
 
